@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@stockdesk/shared": ["packages/shared/src/index.ts"],
+      "@stockdesk/analysis-core": ["packages/analysis-core/src/index.ts"],
+      "@stockdesk/db": ["packages/db/src/index.ts"]
+    }
+  }
+}
+

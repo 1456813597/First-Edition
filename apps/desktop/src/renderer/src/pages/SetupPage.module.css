@@ -1,0 +1,72 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  padding: 40px;
+  gap: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 164, 87, 0.2), transparent 28%),
+    radial-gradient(circle at 80% 80%, rgba(63, 128, 196, 0.24), transparent 30%),
+    linear-gradient(135deg, #08121d 0%, #13263b 100%);
+  color: #eef5ff;
+}
+
+.hero {
+  align-self: end;
+  padding: 40px;
+}
+
+.hero span {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #90bbec;
+  font-size: 12px;
+}
+
+.hero h1 {
+  font-size: 58px;
+  line-height: 1;
+  margin: 16px 0;
+}
+
+.hero p {
+  max-width: 48ch;
+  color: #bfd0e4;
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+  padding: 28px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  align-self: center;
+}
+
+.form label {
+  display: grid;
+  gap: 8px;
+}
+
+.form input {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #fff;
+}
+
+.form button {
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #ef7f4d, #f9c25b);
+  color: #0a1016;
+  font-weight: 700;
+}
+
+.error {
+  color: #ffb3b3;
+}
+

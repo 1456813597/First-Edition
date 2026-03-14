@@ -1,0 +1,2 @@
+# PyInstaller spec placeholder.
+

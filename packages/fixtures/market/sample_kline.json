@@ -1,0 +1,17 @@
+{
+  "symbol": "000001.SZ",
+  "timeframe": "1d",
+  "adjustMode": "qfq",
+  "bars": [
+    {
+      "time": "2026-02-20T07:00:00.000Z",
+      "open": 12.11,
+      "high": 12.38,
+      "low": 11.95,
+      "close": 12.31,
+      "volume": 1234567
+    }
+  ],
+  "updatedAt": "2026-02-28T00:00:00.000Z"
+}
+

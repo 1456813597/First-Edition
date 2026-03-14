@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "rootDir": "../..",
+    "outDir": "dist-web",
+    "paths": {
+      "@/*": ["apps/desktop/src/renderer/src/*"],
+      "@stockdesk/shared": ["packages/shared/src/index.ts"],
+      "@stockdesk/analysis-core": ["packages/analysis-core/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/renderer/src/**/*.ts",
+    "src/renderer/src/**/*.tsx",
+    "src/renderer/src/**/*.d.ts",
+    "src/preload/**/*.ts",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/analysis-core/src/**/*.ts"
+  ]
+}

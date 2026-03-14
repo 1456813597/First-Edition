@@ -1,0 +1,30 @@
+.card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card span {
+  font-size: 13px;
+  color: #b5c4d6;
+}
+
+.card strong {
+  font-size: 28px;
+}
+
+.card small {
+  color: #94abc3;
+}
+
+.card[data-accent="rise"] strong {
+  color: #ff8f8f;
+}
+
+.card[data-accent="fall"] strong {
+  color: #64d39a;
+}
+

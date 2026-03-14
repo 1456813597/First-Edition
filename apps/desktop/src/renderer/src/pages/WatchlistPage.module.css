@@ -1,0 +1,269 @@
+﻿.page {
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.header span {
+  color: #8eb2d7;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+}
+
+.header h2 {
+  margin: 8px 0 0;
+  font-size: 34px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.actions button,
+.toolbar button,
+.groups button,
+.rowActions button,
+.inlineButton {
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eff5ff;
+}
+
+.actions button:disabled,
+.toolbar button:disabled,
+.rowActions button:disabled {
+  opacity: 0.45;
+}
+
+.statusBar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.statusItem {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statusItem span {
+  color: #a8c3de;
+  font-size: 12px;
+}
+
+.statusItem strong {
+  color: #eef5ff;
+}
+
+.online {
+  color: #76d39e;
+}
+
+.offline {
+  color: #ff7a7a;
+}
+
+.muted {
+  color: #9ab2cb;
+}
+
+.failure,
+.message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #c5d9ec;
+}
+
+.failure {
+  color: #f9c6c6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 18px;
+}
+
+.groups,
+.panel {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.groups {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+}
+
+.active {
+  background: linear-gradient(135deg, #285a8d, #4a88c7) !important;
+}
+
+.panel {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(0, 120px));
+  gap: 10px;
+}
+
+.toolbar input {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
+
+.table {
+  display: grid;
+  gap: 10px;
+}
+
+.rowHeader,
+.row {
+  display: grid;
+  grid-template-columns: 180px minmax(130px, 1fr) 90px 90px 110px 90px 90px 140px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.rowHeader {
+  color: #9fbad4;
+  font-size: 12px;
+}
+
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rise {
+  color: #ff7a7a;
+}
+
+.fall {
+  color: #76d39e;
+}
+
+.symbolCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.symbolCell strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.inlineButton {
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowActions button,
+.rowActions a {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c8e4ff;
+}
+
+.empty {
+  padding: 24px 16px;
+  color: #aac1d8;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 1320px) {
+  .statusBar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(0, 120px));
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .groups {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .rowHeader,
+  .row {
+    grid-template-columns: 160px minmax(120px, 1fr) 90px 90px 100px 90px 90px 130px;
+  }
+}
+
+@media (max-width: 900px) {
+  .header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+
+  .statusBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .toolbar input {
+    grid-column: 1 / -1;
+  }
+
+  .table {
+    overflow-x: auto;
+  }
+
+  .rowHeader,
+  .row {
+    min-width: 940px;
+  }
+}

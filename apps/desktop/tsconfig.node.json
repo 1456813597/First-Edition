@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "dist-node"
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "electron.vite.config.ts",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/analysis-core/src/**/*.ts",
+    "../../packages/db/src/**/*.ts"
+  ]
+}

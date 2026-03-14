@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "analysis.v1",
+  "summaryLines": [
+    "短期趋势偏强，但需要确认量能延续。",
+    "当前价位接近近 20 日压力位，追高风险较高。",
+    "若放量突破压力位，3-10 日窗口仍有延续空间。"
+  ],
+  "stance": "bullish",
+  "forecastWindow": "10d",
+  "targetPriceRange": {
+    "low": 12.1,
+    "high": 13.0
+  },
+  "targetChangePctRange": {
+    "low": -1.5,
+    "high": 5.8
+  },
+  "confidence": {
+    "score": 63,
+    "rationale": "技术面信号偏多，但事件信息不足。"
+  },
+  "dataSufficiency": "limited",
+  "evidence": [
+    {
+      "dimension": "technical",
+      "thesis": "MA5 高于 MA10，短线趋势改善。",
+      "featureRefs": ["ma5", "ma10"]
+    }
+  ],
+  "risks": ["成交量回落", "突发公告"],
+  "invalidationSignals": ["跌破近 20 日支撑位", "MACD 柱线连续转负"],
+  "actionPlan": {
+    "observationLevels": [12.1, 12.5],
+    "stopLossIdea": "若放量跌破支撑位，优先控制仓位。",
+    "takeProfitIdea": "接近压力位且量能衰减时分批兑现。",
+    "disclaimer": "仅供研究参考，不构成投资建议"
+  }
+}
+
