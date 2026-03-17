@@ -44,11 +44,14 @@ export const settingsProfiles = sqliteTable("settings_profiles", {
 export const llmProfiles = sqliteTable("llm_profiles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  protocol: text("protocol").notNull().default("openai_chat_compatible"),
+  displayProviderName: text("display_provider_name").notNull().default("OpenAI Compatible"),
   baseUrl: text("base_url").notNull(),
   model: text("model").notNull(),
   timeoutMs: integer("timeout_ms").notNull(),
   maxRetries: integer("max_retries").notNull(),
   supportsJsonSchema: integer("supports_json_schema", { mode: "boolean" }).notNull().default(false),
+  advancedHeaders: text("advanced_headers"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull()
 });
@@ -96,6 +99,43 @@ export const analysisRuns = sqliteTable("analysis_runs", {
   summary: text("summary").notNull(),
   llmProfileId: text("llm_profile_id").notNull(),
   createdAt: text("created_at").notNull()
+});
+
+export const analysisTasks = sqliteTable("analysis_tasks", {
+  id: text("id").primaryKey(),
+  symbol: text("symbol").notNull(),
+  workflowId: text("workflow_id").notNull(),
+  templateId: text("template_id").notNull(),
+  llmProfileId: text("llm_profile_id").notNull(),
+  protocol: text("protocol").notNull(),
+  status: text("status").notNull(),
+  createdAt: text("created_at").notNull(),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  failedAt: text("failed_at"),
+  errorSummary: text("error_summary"),
+  finalRunId: text("final_run_id"),
+  currentStageKey: text("current_stage_key"),
+  currentStageStatus: text("current_stage_status")
+});
+
+export const analysisStageRuns = sqliteTable("analysis_stage_runs", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull().references(() => analysisTasks.id, { onDelete: "cascade" }),
+  stageKey: text("stage_key").notNull(),
+  stageOrder: integer("stage_order").notNull(),
+  actorKind: text("actor_kind").notNull(),
+  status: text("status").notNull(),
+  model: text("model"),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  inputPayload: text("input_payload"),
+  outputPayload: text("output_payload"),
+  rawPayload: text("raw_payload"),
+  usagePayload: text("usage_payload"),
+  errorSummary: text("error_summary")
 });
 
 export const analysisArtifacts = sqliteTable("analysis_artifacts", {

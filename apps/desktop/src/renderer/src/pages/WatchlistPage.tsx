@@ -1,4 +1,5 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Input } from "@fluentui/react-components";
 import dayjs from "dayjs";
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
@@ -103,7 +104,7 @@ export function WatchlistPage() {
 
   const llmHealthQuery = useQuery({
     queryKey: ["health", "llm", activeLlmProfile?.id],
-    queryFn: () => window.stockdesk.settings.testLlmProfile(activeLlmProfile!.id),
+    queryFn: () => window.stockdesk.settings.testLlmProfile(activeLlmProfile!.id, undefined, "models_only"),
     enabled: Boolean(activeLlmProfile?.id),
     refetchInterval: refreshPaused ? false : 60000
   });
@@ -173,7 +174,7 @@ export function WatchlistPage() {
       if (!activeLlmProfile?.id) {
         throw new Error("请先在设置页配置可用的 LLM。");
       }
-      return window.stockdesk.analysis.run({
+      return window.stockdesk.analysis.startTask({
         symbol,
         templateId: "quick_scan_v1",
         forecastWindow: "3d",
@@ -185,8 +186,9 @@ export function WatchlistPage() {
       setActionMessage(`正在分析 ${symbol}...`);
     },
     onSuccess: async (_, symbol) => {
-      setActionMessage(`${symbol} 分析完成，已写入分析记录。`);
-      await queryClient.invalidateQueries({ queryKey: ["analysisRuns"] });
+      setActionMessage(`${symbol} 分析任务已创建，后台会持续执行并写入研究报告。`);
+      await queryClient.invalidateQueries({ queryKey: ["analysisTasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["analysisQueueStatus"] });
     },
     onError: (error, symbol) => {
       setActionMessage(`${symbol} 分析失败：${getErrorMessage(error) ?? "未知错误"}`);
@@ -205,7 +207,7 @@ export function WatchlistPage() {
       let failed = 0;
       for (const symbol of batchSymbols) {
         try {
-          await window.stockdesk.analysis.run({
+          await window.stockdesk.analysis.startTask({
             symbol,
             templateId: "quick_scan_v1",
             forecastWindow: "3d",
@@ -222,8 +224,9 @@ export function WatchlistPage() {
       setActionMessage(`批量分析进行中，共 ${batchSymbols.length} 只股票。`);
     },
     onSuccess: async (result) => {
-      setActionMessage(`批量分析完成：成功 ${result.success}，失败 ${result.failed}`);
-      await queryClient.invalidateQueries({ queryKey: ["analysisRuns"] });
+      setActionMessage(`批量任务已入队：成功 ${result.success}，失败 ${result.failed}`);
+      await queryClient.invalidateQueries({ queryKey: ["analysisTasks"] });
+      await queryClient.invalidateQueries({ queryKey: ["analysisQueueStatus"] });
     },
     onError: (error) => {
       setActionMessage(`批量分析失败：${getErrorMessage(error) ?? "未知错误"}`);
@@ -300,16 +303,19 @@ export function WatchlistPage() {
     <section className={styles.page}>
       <header className={styles.header}>
         <div>
+          <Badge appearance="filled" color="informative">
+            Market Workspace
+          </Badge>
           <span>Watchlist</span>
-          <h2>盘中 5 秒刷新，分析结果可直接入库</h2>
+          <h2>盘中 5 秒刷新，研究结果直接回写本地库</h2>
         </div>
         <div className={styles.actions}>
-          <button onClick={() => importMutation.mutate()} disabled={importMutation.isPending}>
+          <Button appearance="secondary" onClick={() => importMutation.mutate()} disabled={importMutation.isPending}>
             CSV 导入
-          </button>
-          <button onClick={() => exportMutation.mutate()} disabled={exportMutation.isPending}>
+          </Button>
+          <Button appearance="secondary" onClick={() => exportMutation.mutate()} disabled={exportMutation.isPending}>
             安全导出
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -362,6 +368,10 @@ export function WatchlistPage() {
 
       <div className={styles.grid}>
         <aside className={styles.groups}>
+          <div className={styles.groupsHeader}>
+            <strong>分组视图</strong>
+            <span>{rows.length} 只</span>
+          </div>
           <button className={selectedGroupId === null ? styles.active : ""} onClick={() => setSelectedGroupId(null)}>
             全部
           </button>
@@ -374,22 +384,27 @@ export function WatchlistPage() {
 
         <div className={styles.panel}>
           <div className={styles.toolbar}>
-            <input value={symbolsInput} onChange={(event) => setSymbolsInput(event.target.value)} placeholder="输入 000001、000001.SZ 或多个代码" />
-            <button onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !symbolsInput.trim()}>
+            <Input
+              value={symbolsInput}
+              onChange={(_, data) => setSymbolsInput(data.value)}
+              placeholder="输入 000001、000001.SZ 或多个代码"
+            />
+            <Button appearance="primary" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !symbolsInput.trim()}>
               添加自选
-            </button>
-            <button
+            </Button>
+            <Button
+              appearance="secondary"
               onClick={() => batchQuickScanMutation.mutate(rows.map((item) => item.symbol as SymbolId))}
               disabled={batchQuickScanMutation.isPending || rows.length === 0 || !activeLlmProfile?.id}
             >
               批量分析
-            </button>
-            <button onClick={() => void handleManualRefresh()} disabled={itemsQuery.isFetching && quotesQuery.isFetching}>
+            </Button>
+            <Button appearance="secondary" onClick={() => void handleManualRefresh()} disabled={itemsQuery.isFetching && quotesQuery.isFetching}>
               手动刷新
-            </button>
-            <button onClick={() => setRefreshPaused((current) => !current)}>
+            </Button>
+            <Button appearance="secondary" onClick={() => setRefreshPaused((current) => !current)}>
               {refreshPaused ? "恢复刷新" : "暂停刷新"}
-            </button>
+            </Button>
           </div>
 
           <div className={styles.table}>
@@ -421,13 +436,15 @@ export function WatchlistPage() {
                   <span className={styles.numeric}>{formatPercent(item.latestQuote?.turnoverRate)}</span>
                   <span className={styles.numeric}>{item.latestQuote ? dayjs(item.latestQuote.updatedAt).format("HH:mm:ss") : "--"}</span>
                   <div className={styles.rowActions}>
-                    <button
+                    <Button
+                      size="small"
+                      appearance="primary"
                       type="button"
                       onClick={() => quickScanMutation.mutate(item.symbol as SymbolId)}
                       disabled={quickScanMutation.isPending || !activeLlmProfile?.id}
                     >
                       {runningSymbol === item.symbol ? "分析中" : "分析"}
-                    </button>
+                    </Button>
                     <Link to={`/symbol/${item.symbol}`}>打开</Link>
                   </div>
                 </div>
@@ -436,6 +453,53 @@ export function WatchlistPage() {
             {rows.length === 0 ? <div className={styles.empty}>暂无自选股，先从上方添加或导入。</div> : null}
           </div>
         </div>
+
+        <aside className={styles.insightRail}>
+          <div className={styles.railCard}>
+            <strong>运行概览</strong>
+            <div className={styles.railMetrics}>
+              <div>
+                <span>交易状态</span>
+                <strong>{runtimeMode}</strong>
+              </div>
+              <div>
+                <span>数据源</span>
+                <strong>{dataSourceOnline ? "在线" : "离线"}</strong>
+              </div>
+              <div>
+                <span>LLM</span>
+                <strong>{activeLlmProfile ? (llmOnline ? "在线" : "离线") : "未配置"}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.railCard}>
+            <strong>研究提示</strong>
+            <ul className={styles.railList}>
+              <li>优先对当前分组执行批量分析，减少无关 token 消耗。</li>
+              <li>混合行情来源时，先关注缓存与实时结果不一致的标的。</li>
+              <li>个股详情页现在是主研究区，图表、新闻、事件和提醒会在同页联动。</li>
+            </ul>
+          </div>
+
+          <div className={styles.railCard}>
+            <strong>统计</strong>
+            <div className={styles.railMetrics}>
+              <div>
+                <span>实时行情</span>
+                <strong>{liveQuoteCount}</strong>
+              </div>
+              <div>
+                <span>缓存行情</span>
+                <strong>{cacheQuoteCount}</strong>
+              </div>
+              <div>
+                <span>最后刷新</span>
+                <strong>{lastRefreshAt > 0 ? dayjs(lastRefreshAt).format("HH:mm:ss") : "--"}</strong>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
   );

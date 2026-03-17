@@ -1,14 +1,24 @@
 import { z } from "zod";
 import { isoDateTimeSchema, urlSchema } from "./common";
 
+export const llmProtocolSchema = z.enum([
+  "openai_responses",
+  "openai_chat_compatible",
+  "openrouter_api",
+  "bailian_responses_cn"
+]);
+
 export const llmProfileSchema = z.object({
   id: z.string(),
   name: z.string(),
+  protocol: llmProtocolSchema,
+  displayProviderName: z.string().min(1),
   baseUrl: urlSchema,
   model: z.string(),
   timeoutMs: z.number().int().min(1000),
   maxRetries: z.number().int().min(0).max(5),
   supportsJsonSchema: z.boolean(),
+  advancedHeaders: z.record(z.string(), z.string()).nullable(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema
 });
@@ -45,11 +55,14 @@ export const saveSettingsInputSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      protocol: llmProtocolSchema.default("openai_chat_compatible"),
+      displayProviderName: z.string().min(1),
       baseUrl: urlSchema,
       model: z.string(),
       timeoutMs: z.number().int().min(1000),
       maxRetries: z.number().int().min(0).max(5),
       supportsJsonSchema: z.boolean(),
+      advancedHeaders: z.record(z.string(), z.string()).nullable().default(null),
       apiKey: z.string().optional()
     })
   ),
@@ -68,4 +81,3 @@ export const testResultSchema = z.object({
   message: z.string(),
   details: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional()
 });
-

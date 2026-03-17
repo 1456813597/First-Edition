@@ -1,6 +1,7 @@
-﻿.page {
+.page {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+  color: var(--app-text);
 }
 
 .header {
@@ -10,16 +11,22 @@
   gap: 16px;
 }
 
+.header > div:first-child {
+  display: grid;
+  gap: 10px;
+}
+
 .header span {
-  color: #8eb2d7;
+  color: var(--app-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 12px;
 }
 
 .header h2 {
-  margin: 8px 0 0;
-  font-size: 34px;
+  margin: 0;
+  font-size: clamp(30px, 3vw, 42px);
+  letter-spacing: -0.04em;
 }
 
 .actions {
@@ -27,22 +34,13 @@
   gap: 12px;
 }
 
-.actions button,
-.toolbar button,
 .groups button,
-.rowActions button,
 .inlineButton {
   border: 0;
   border-radius: 14px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(148, 163, 184, 0.08);
   color: #eff5ff;
-}
-
-.actions button:disabled,
-.toolbar button:disabled,
-.rowActions button:disabled {
-  opacity: 0.45;
 }
 
 .statusBar {
@@ -51,96 +49,108 @@
   gap: 10px;
 }
 
+.statusItem,
+.groups,
+.panel,
+.insightRail,
+.railCard {
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.68));
+  border: 1px solid var(--app-border);
+  backdrop-filter: blur(24px);
+}
+
 .statusItem {
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
 }
 
 .statusItem span {
-  color: #a8c3de;
+  color: var(--app-text-muted);
   font-size: 12px;
 }
 
 .statusItem strong {
-  color: #eef5ff;
+  color: var(--app-text);
 }
 
 .online {
-  color: #76d39e;
+  color: #86efac;
 }
 
 .offline {
-  color: #ff7a7a;
+  color: #fca5a5;
 }
 
 .muted {
-  color: #9ab2cb;
+  color: var(--app-text-muted);
 }
 
 .failure,
 .message {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background: rgba(15, 23, 42, 0.72);
   color: #c5d9ec;
 }
 
 .failure {
-  color: #f9c6c6;
+  color: #fecaca;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
   gap: 18px;
 }
 
 .groups,
-.panel {
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.panel,
+.insightRail {
+  padding: 16px;
 }
 
 .groups {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 16px;
+}
+
+.groupsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+.groupsHeader span {
+  font-size: 12px;
+  color: var(--app-text-muted);
 }
 
 .active {
-  background: linear-gradient(135deg, #285a8d, #4a88c7) !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.36), rgba(14, 165, 233, 0.24)) !important;
 }
 
 .panel {
-  padding: 16px;
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(0, 120px));
+  grid-template-columns: minmax(240px, 1fr) repeat(4, minmax(0, 120px));
   gap: 10px;
-}
-
-.toolbar input {
-  border: 0;
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.22);
-  color: #fff;
 }
 
 .table {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .rowHeader,
@@ -149,13 +159,13 @@
   grid-template-columns: 180px minmax(130px, 1fr) 90px 90px 110px 90px 90px 140px;
   gap: 10px;
   align-items: center;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(0, 0, 0, 0.16);
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.28);
 }
 
 .rowHeader {
-  color: #9fbad4;
+  color: var(--app-text-muted);
   font-size: 12px;
 }
 
@@ -165,11 +175,11 @@
 }
 
 .rise {
-  color: #ff7a7a;
+  color: #fca5a5;
 }
 
 .fall {
-  color: #76d39e;
+  color: #86efac;
 }
 
 .symbolCell {
@@ -192,13 +202,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: flex-end;
 }
 
-.rowActions button,
 .rowActions a {
   padding: 7px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(148, 163, 184, 0.08);
   color: #c8e4ff;
 }
 
@@ -206,16 +216,70 @@
   padding: 24px 16px;
   color: #aac1d8;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(2, 6, 23, 0.22);
 }
 
-@media (max-width: 1320px) {
+.insightRail {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.railCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.railMetrics {
+  display: grid;
+  gap: 10px;
+}
+
+.railMetrics div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.24);
+}
+
+.railMetrics span {
+  font-size: 12px;
+  color: var(--app-text-muted);
+}
+
+.railList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: #c5d2ea;
+}
+
+@media (max-width: 1440px) {
   .statusBar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .toolbar {
-    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(0, 120px));
+  .grid {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .insightRail {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .statusBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .grid {
@@ -226,44 +290,43 @@
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
-  .rowHeader,
-  .row {
-    grid-template-columns: 160px minmax(120px, 1fr) 90px 90px 100px 90px 90px 130px;
-  }
-}
-
-@media (max-width: 900px) {
-  .header {
-    flex-direction: column;
-    align-items: start;
-  }
-
-  .actions {
-    width: 100%;
-  }
-
-  .actions button {
-    flex: 1;
-  }
-
-  .statusBar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .toolbar {
     grid-template-columns: 1fr 1fr;
   }
 
-  .toolbar input {
+  .toolbar :first-child {
     grid-column: 1 / -1;
-  }
-
-  .table {
-    overflow-x: auto;
   }
 
   .rowHeader,
   .row {
-    min-width: 940px;
+    grid-template-columns: 160px minmax(120px, 1fr) 90px 90px 100px 90px 90px 130px;
+  }
+
+  .insightRail {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .rowHeader,
+  .row {
+    grid-template-columns: 1.1fr 1fr 90px 90px;
+  }
+
+  .rowHeader span:nth-child(5),
+  .rowHeader span:nth-child(6),
+  .rowHeader span:nth-child(7),
+  .rowHeader span:nth-child(8),
+  .row span:nth-child(5),
+  .row span:nth-child(6),
+  .row span:nth-child(7),
+  .row > div:last-child {
+    display: none;
   }
 }

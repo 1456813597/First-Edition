@@ -52,7 +52,26 @@ function buildAnalysisMarkdown(runs: AnalysisRunDetail[], exportedAt: string) {
       "### 关键结论"
     );
 
-    for (const line of run.result.summaryLines) {
+    for (const line of run.result.summary) {
+      lines.push(`- ${escapeMarkdown(line)}`);
+    }
+
+    lines.push(
+      "",
+      "### 技术面",
+      `- 概述: ${escapeMarkdown(run.result.technicalView.summary)}`
+    );
+    for (const line of run.result.technicalView.bullets) {
+      lines.push(`- ${escapeMarkdown(line)}`);
+    }
+
+    lines.push(
+      "",
+      "### 财务与事件",
+      `- 财务面: ${escapeMarkdown(run.result.fundamentalView.summary)}`,
+      `- 新闻事件: ${escapeMarkdown(run.result.newsEventView.summary)}`
+    );
+    for (const line of [...run.result.fundamentalView.bullets, ...run.result.newsEventView.bullets]) {
       lines.push(`- ${escapeMarkdown(line)}`);
     }
 
@@ -62,16 +81,32 @@ function buildAnalysisMarkdown(runs: AnalysisRunDetail[], exportedAt: string) {
     }
 
     lines.push("", "### 风险");
-    for (const line of run.result.risks) {
-      lines.push(`- ${escapeMarkdown(line)}`);
+    for (const risk of run.result.riskMatrix) {
+      lines.push(`- [${risk.level}] ${escapeMarkdown(risk.title)}: ${escapeMarkdown(risk.detail)} | 应对: ${escapeMarkdown(risk.mitigation)}`);
     }
 
     lines.push(
       "",
       "### 行动计划",
       `- 观察价位: ${run.result.actionPlan.observationLevels.join(" / ") || "--"}`,
+      `- 入场思路: ${escapeMarkdown(run.result.actionPlan.entryIdea)}`,
       `- 止损思路: ${escapeMarkdown(run.result.actionPlan.stopLossIdea)}`,
-      `- 止盈思路: ${escapeMarkdown(run.result.actionPlan.takeProfitIdea)}`
+      `- 止盈思路: ${escapeMarkdown(run.result.actionPlan.takeProfitIdea)}`,
+      `- 仓位思路: ${escapeMarkdown(run.result.actionPlan.positionSizingIdea)}`
+    );
+
+    lines.push("", "### 情景树");
+    lines.push(`- Bull: ${escapeMarkdown(run.result.scenarioTree.bull.thesis)} (${escapeMarkdown(run.result.scenarioTree.bull.probabilityLabel)})`);
+    lines.push(`- Base: ${escapeMarkdown(run.result.scenarioTree.base.thesis)} (${escapeMarkdown(run.result.scenarioTree.base.probabilityLabel)})`);
+    lines.push(`- Bear: ${escapeMarkdown(run.result.scenarioTree.bear.thesis)} (${escapeMarkdown(run.result.scenarioTree.bear.probabilityLabel)})`);
+
+    lines.push(
+      "",
+      "### 板块与指数联动",
+      `- 行业: ${escapeMarkdown(run.result.sectorIndexLinkage.industry ?? "--")}`,
+      `- 概念板块: ${escapeMarkdown(run.result.sectorIndexLinkage.conceptBoards.join(" / ") || "--")}`,
+      `- 指数快照: ${escapeMarkdown(run.result.sectorIndexLinkage.indexSnapshot.join(" / ") || "--")}`,
+      `- 解读: ${escapeMarkdown(run.result.sectorIndexLinkage.interpretation)}`
     );
   }
 

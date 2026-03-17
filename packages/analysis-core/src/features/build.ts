@@ -1,4 +1,4 @@
-import type { EventItem, FeaturePack, FeatureValue, KlineBar, NewsItem, QuoteSnapshot, SymbolId } from "@stockdesk/shared";
+import type { EventItem, FeaturePack, FeatureValue, FundamentalSnapshot, KlineBar, NewsItem, QuoteSnapshot, SymbolId } from "@stockdesk/shared";
 import { nowIso } from "@stockdesk/shared";
 import { atr, boll, buildIndicatorMap, ema, macd, obv, rsi, sma } from "../indicators/calc";
 
@@ -32,6 +32,18 @@ function standardDeviation(values: number[]): number {
   return Math.sqrt(variance);
 }
 
+function pctReturns(values: number[]): number[] {
+  const returns: number[] = [];
+  for (let index = 1; index < values.length; index += 1) {
+    const previous = values[index - 1];
+    if (previous === 0) {
+      continue;
+    }
+    returns.push(((values[index] - previous) / previous) * 100);
+  }
+  return returns;
+}
+
 function dedupeNews(news: NewsItem[]): NewsItem[] {
   const seen = new Set<string>();
   return news.filter((item) => {
@@ -51,10 +63,12 @@ export function buildFeaturePack(input: {
   intradayBars: KlineBar[];
   news: NewsItem[];
   events: EventItem[];
+  fundamentals?: FundamentalSnapshot | null;
   marketSummary: string[];
 }): FeaturePack {
   const closes = input.dailyBars.map((bar) => bar.close);
   const volumes = input.dailyBars.map((bar) => bar.volume);
+  const returns = pctReturns(closes);
   const latestClose = closes.at(-1) ?? null;
   const twentyBarWindow = input.dailyBars.slice(-20);
   const recentHigh = twentyBarWindow.length > 0 ? Math.max(...twentyBarWindow.map((bar) => bar.high)) : null;
@@ -84,8 +98,8 @@ export function buildFeaturePack(input: {
     features.push(feature("ret_20d", "20d收益率(%)", pctChange(closes.at(-1) as number, closes.at(-21) as number)));
   }
 
-  features.push(feature("volatility_10d", "10d波动", closes.length >= 10 ? standardDeviation(closes.slice(-10)) : null));
-  features.push(feature("volatility_20d", "20d波动", closes.length >= 20 ? standardDeviation(closes.slice(-20)) : null));
+  features.push(feature("volatility_10d", "10d收益率波动(%)", returns.length >= 10 ? standardDeviation(returns.slice(-10)) : null));
+  features.push(feature("volatility_20d", "20d收益率波动(%)", returns.length >= 20 ? standardDeviation(returns.slice(-20)) : null));
   features.push(feature("drawdown_20d", "20d最大回撤(%)", closes.length >= 20 ? maxDrawdown(closes.slice(-20)) : null));
   features.push(feature("ma5", "MA5", ma5));
   features.push(feature("ma10", "MA10", ma10));
@@ -117,6 +131,15 @@ export function buildFeaturePack(input: {
   features.push(feature("intraday_samples", "分时样本数", input.intradayBars.length));
   features.push(feature("news_count_7d", "近7天新闻数", input.news.length));
   features.push(feature("event_count_30d", "近30天事件数", input.events.length));
+  features.push(feature("fund_pe_ttm", "PE(TTM)", input.fundamentals?.peTtm ?? null));
+  features.push(feature("fund_pb", "PB", input.fundamentals?.pb ?? null));
+  features.push(feature("fund_ps_ttm", "PS(TTM)", input.fundamentals?.psTtm ?? null));
+  features.push(feature("fund_roe", "ROE(%)", input.fundamentals?.roe ?? null));
+  features.push(feature("fund_net_profit_yoy", "净利同比(%)", input.fundamentals?.netProfitYoY ?? null));
+  features.push(feature("fund_revenue_yoy", "营收同比(%)", input.fundamentals?.revenueYoY ?? null));
+  features.push(feature("fund_total_market_cap", "总市值", input.fundamentals?.totalMarketCap ?? null));
+  features.push(feature("fund_circulating_market_cap", "流通市值", input.fundamentals?.circulatingMarketCap ?? null));
+  features.push(feature("fund_report_date", "财报报告期", input.fundamentals?.reportDate ?? null));
 
   const dataQualityFlags: string[] = [];
   if (input.dailyBars.length < 30) {
@@ -130,6 +153,9 @@ export function buildFeaturePack(input: {
   }
   if (input.events.length === 0) {
     dataQualityFlags.push("近30天无事件摘要");
+  }
+  if (!input.fundamentals) {
+    dataQualityFlags.push("缺少财务与估值快照");
   }
 
   return {
@@ -146,4 +172,3 @@ export function buildFeaturePack(input: {
 export function attachIndicators(bars: KlineBar[]) {
   return buildIndicatorMap(bars);
 }
-

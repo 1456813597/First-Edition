@@ -43,15 +43,15 @@ export function PriceChart(props: { series: KlineSeries | undefined; loading?: b
 
     const chart: any = createChart(hostRef.current, {
       layout: {
-        background: { color: "#09131f" },
-        textColor: "#b7c8db"
+        background: { color: "#0b1220" },
+        textColor: "#c6d4eb"
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.06)" },
-        horzLines: { color: "rgba(255,255,255,0.06)" }
+        vertLines: { color: "rgba(148,163,184,0.08)" },
+        horzLines: { color: "rgba(148,163,184,0.08)" }
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.1)" },
-      timeScale: { borderColor: "rgba(255,255,255,0.1)" },
+      rightPriceScale: { borderColor: "rgba(148,163,184,0.16)" },
+      timeScale: { borderColor: "rgba(148,163,184,0.16)" },
       width: hostRef.current.clientWidth,
       height: 420
     });

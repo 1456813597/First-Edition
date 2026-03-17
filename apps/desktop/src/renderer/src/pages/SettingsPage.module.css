@@ -1,91 +1,79 @@
-﻿.page {
+.page {
   display: grid;
-  gap: 20px;
+  gap: 18px;
+  color: var(--app-text);
 }
 
-.page span {
-  color: #8db5de;
-  letter-spacing: 0.16em;
+.header {
+  display: grid;
+  gap: 10px;
+}
+
+.header > span {
+  color: var(--app-text-muted);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   font-size: 12px;
 }
 
-.page h2 {
-  margin: 8px 0 0;
-  font-size: 34px;
+.header h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 42px);
+  letter-spacing: -0.04em;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.panel {
+.panel,
+.detailPanel {
   display: grid;
   gap: 12px;
-  padding: 20px;
+  padding: 22px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.field {
-  display: grid;
-  gap: 8px;
-}
-
-.field span {
-  letter-spacing: normal;
-  text-transform: none;
-  font-size: 13px;
-  color: #b7cae0;
-}
-
-.field input {
-  border: 0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.24);
-  color: #fff;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.68));
+  border: 1px solid var(--app-border);
+  backdrop-filter: blur(24px);
 }
 
 .rowActions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.panel button {
-  border: 0;
-  border-radius: 14px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-}
-
-.panel button:disabled {
-  opacity: 0.45;
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .meta {
   margin: 0;
-  color: #b9cee4;
-  word-break: break-all;
+  color: #c1d0e8;
+  word-break: break-word;
+}
+
+.meta strong {
+  color: var(--app-text);
 }
 
 .message {
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background: rgba(15, 23, 42, 0.74);
 }
 
 .success {
-  color: #bfe5cc;
+  color: #bbf7d0;
 }
 
 .error {
-  color: #ffb3b3;
+  color: #fecaca;
 }
 
 @media (max-width: 1080px) {
@@ -93,7 +81,7 @@
     grid-template-columns: 1fr;
   }
 
-  .rowActions {
-    flex-wrap: wrap;
+  .formGrid {
+    grid-template-columns: 1fr;
   }
 }

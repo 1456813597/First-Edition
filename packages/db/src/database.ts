@@ -11,6 +11,19 @@ export interface DatabaseHandle {
   db: StockdeskDb;
 }
 
+function ensureColumn(
+  sqlite: Database.Database,
+  tableName: string,
+  columnName: string,
+  definition: string
+) {
+  const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  if (columns.some((column) => column.name === columnName)) {
+    return;
+  }
+  sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${definition}`);
+}
+
 function ensureSchema(sqlite: Database.Database) {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS watchlist_groups (
@@ -58,11 +71,14 @@ function ensureSchema(sqlite: Database.Database) {
     CREATE TABLE IF NOT EXISTS llm_profiles (
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
+      protocol TEXT NOT NULL DEFAULT 'openai_chat_compatible',
+      display_provider_name TEXT NOT NULL DEFAULT 'OpenAI Compatible',
       base_url TEXT NOT NULL,
       model TEXT NOT NULL,
       timeout_ms INTEGER NOT NULL,
       max_retries INTEGER NOT NULL,
       supports_json_schema INTEGER NOT NULL DEFAULT 0,
+      advanced_headers TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -112,6 +128,43 @@ function ensureSchema(sqlite: Database.Database) {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS analysis_tasks (
+      id TEXT PRIMARY KEY NOT NULL,
+      symbol TEXT NOT NULL,
+      workflow_id TEXT NOT NULL,
+      template_id TEXT NOT NULL,
+      llm_profile_id TEXT NOT NULL,
+      protocol TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      started_at TEXT,
+      completed_at TEXT,
+      failed_at TEXT,
+      error_summary TEXT,
+      final_run_id TEXT,
+      current_stage_key TEXT,
+      current_stage_status TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS analysis_stage_runs (
+      id TEXT PRIMARY KEY NOT NULL,
+      task_id TEXT NOT NULL REFERENCES analysis_tasks(id) ON DELETE CASCADE,
+      stage_key TEXT NOT NULL,
+      stage_order INTEGER NOT NULL,
+      actor_kind TEXT NOT NULL,
+      status TEXT NOT NULL,
+      model TEXT,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      started_at TEXT,
+      completed_at TEXT,
+      input_payload TEXT,
+      output_payload TEXT,
+      raw_payload TEXT,
+      usage_payload TEXT,
+      error_summary TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS analysis_artifacts (
       run_id TEXT PRIMARY KEY NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
       feature_pack BLOB NOT NULL,
@@ -154,6 +207,10 @@ function ensureSchema(sqlite: Database.Database) {
       completed_at TEXT
     );
   `);
+
+  ensureColumn(sqlite, "llm_profiles", "protocol", "protocol TEXT NOT NULL DEFAULT 'openai_chat_compatible'");
+  ensureColumn(sqlite, "llm_profiles", "display_provider_name", "display_provider_name TEXT NOT NULL DEFAULT 'OpenAI Compatible'");
+  ensureColumn(sqlite, "llm_profiles", "advanced_headers", "advanced_headers TEXT");
 }
 
 export function createDatabase(dbPath: string): DatabaseHandle {

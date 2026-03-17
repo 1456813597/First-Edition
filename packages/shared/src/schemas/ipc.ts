@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { urlSchema } from "./common";
 import {
   analysisExportFormatSchema,
   analysisExportResultSchema,
@@ -6,17 +7,43 @@ import {
   analysisRunDetailSchema,
   analysisRunInputSchema,
   analysisRunSchema,
-  analysisRunSummarySchema
+  analysisRunSummarySchema,
+  analysisStageRunSchema,
+  analysisStartTaskInputSchema,
+  analysisTaskDetailSchema,
+  analysisTaskFilterSchema,
+  analysisTaskSummarySchema
 } from "./analysis";
 import { alertEventSchema, alertRuleSchema, alertRuleTypeSchema } from "./alert";
-import { eventItemSchema, fundamentalSnapshotSchema, klineSeriesSchema, newsItemSchema, quoteSnapshotSchema } from "./market";
-import { appSettingsSchema, saveSettingsInputSchema, testResultSchema } from "./settings";
+import {
+  eventItemSchema,
+  fundamentalSnapshotSchema,
+  klineSeriesSchema,
+  newsItemSchema,
+  quoteSnapshotSchema,
+  symbolLinkageSchema,
+  symbolProfileSchema
+} from "./market";
+import { appSettingsSchema, llmProtocolSchema, saveSettingsInputSchema, testResultSchema } from "./settings";
 import { addSymbolsInputSchema, batchResultSchema, importPreviewSchema, watchlistGroupSchema, watchlistItemSchema } from "./watchlist";
 
 export const bootstrapPayloadSchema = z.object({
   settings: appSettingsSchema.nullable(),
   groups: z.array(watchlistGroupSchema)
 });
+
+const testLlmProfileDraftSchema = z.object({
+  protocol: llmProtocolSchema,
+  displayProviderName: z.string().min(1),
+  baseUrl: urlSchema,
+  model: z.string(),
+  timeoutMs: z.number().int().min(1000),
+  maxRetries: z.number().int().min(0).max(5),
+  supportsJsonSchema: z.boolean(),
+  advancedHeaders: z.record(z.string(), z.string()).nullable().default(null)
+});
+
+const llmProbeModeSchema = z.enum(["models_only", "models_then_minimal"]);
 
 export const ipcContract = {
   "bootstrap:get": {
@@ -101,9 +128,25 @@ export const ipcContract = {
     }),
     output: fundamentalSnapshotSchema
   },
+  "market:getSymbolProfile": {
+    input: z.object({
+      symbol: z.string()
+    }),
+    output: symbolProfileSchema
+  },
+  "market:getSymbolLinkage": {
+    input: z.object({
+      symbol: z.string()
+    }),
+    output: symbolLinkageSchema
+  },
   "analysis:run": {
     input: analysisRunInputSchema,
     output: analysisRunSchema
+  },
+  "analysis:startTask": {
+    input: analysisStartTaskInputSchema,
+    output: analysisTaskSummarySchema
   },
   "analysis:listRuns": {
     input: z.object({
@@ -112,6 +155,22 @@ export const ipcContract = {
       end: z.string().optional()
     }).optional(),
     output: z.array(analysisRunSummarySchema)
+  },
+  "analysis:listTasks": {
+    input: analysisTaskFilterSchema,
+    output: z.array(analysisTaskSummarySchema)
+  },
+  "analysis:getTask": {
+    input: z.object({ id: z.string() }),
+    output: analysisTaskDetailSchema
+  },
+  "analysis:getTaskStages": {
+    input: z.object({ taskId: z.string() }),
+    output: z.array(analysisStageRunSchema)
+  },
+  "analysis:cancelTask": {
+    input: z.object({ id: z.string() }),
+    output: analysisTaskSummarySchema
   },
   "analysis:getRun": {
     input: z.object({ id: z.string() }),
@@ -184,7 +243,11 @@ export const ipcContract = {
     output: testResultSchema
   },
   "settings:testLlmProfile": {
-    input: z.object({ profileId: z.string() }),
+    input: z.object({
+      profileId: z.string(),
+      draft: testLlmProfileDraftSchema.optional(),
+      probeMode: llmProbeModeSchema.default("models_then_minimal")
+    }),
     output: testResultSchema
   },
   "settings:clearSecrets": {

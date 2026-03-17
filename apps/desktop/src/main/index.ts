@@ -11,7 +11,15 @@ async function createMainWindow() {
     height: 960,
     minWidth: 1200,
     minHeight: 800,
-    backgroundColor: "#09131f",
+    backgroundColor: "#0b1020",
+    titleBarStyle: process.platform === "win32" ? "hidden" : "default",
+    titleBarOverlay: process.platform === "win32"
+      ? {
+          color: "#0f172a",
+          symbolColor: "#f8fafc",
+          height: 40
+        }
+      : false,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.mjs"),
       contextIsolation: true,
@@ -30,6 +38,14 @@ async function createMainWindow() {
     await mainWindow.loadURL(rendererUrl);
   } else {
     await mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+  }
+
+  if (process.platform === "win32") {
+    (
+      mainWindow as BrowserWindow & {
+        setBackgroundMaterial?: (material: "auto" | "none" | "mica" | "acrylic" | "tabbed") => void;
+      }
+    ).setBackgroundMaterial?.("mica");
   }
 }
 

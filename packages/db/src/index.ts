@@ -4,4 +4,5 @@ export * from "./repos/watchlistRepo";
 export * from "./repos/settingsRepo";
 export * from "./repos/cacheRepo";
 export * from "./repos/analysisRepo";
+export * from "./repos/analysisTaskRepo";
 export * from "./repos/alertRepo";

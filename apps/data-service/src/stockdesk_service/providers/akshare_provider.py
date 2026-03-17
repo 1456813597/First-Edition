@@ -17,8 +17,11 @@ from stockdesk_service.models import (
     HealthPayload,
     KlineBar,
     KlineSeries,
+    LinkageSnapshot,
     NewsItem,
     QuoteSnapshot,
+    SymbolLinkage,
+    SymbolProfile,
     SymbolSearchResult,
 )
 from stockdesk_service.utils.symbols import normalize_symbol, split_symbol, to_ak_prefix
@@ -68,6 +71,13 @@ def safe_float(value) -> float | None:
     return float(value)
 
 
+def safe_text(value) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def pick_float_from_row(row: pd.Series, keys: list[str]) -> float | None:
     for key in keys:
         if key in row:
@@ -98,6 +108,32 @@ def to_utc_iso(value: object) -> str:
 
 def to_compact_date(value: str | None, default: str) -> str:
     return (value or default).replace("-", "")
+
+
+def normalize_listing_date(value: object) -> str | None:
+    text = safe_text(value)
+    if not text:
+        return None
+    cleaned = text.replace("-", "")
+    if re.fullmatch(r"\d{8}", cleaned):
+        return f"{cleaned[0:4]}-{cleaned[4:6]}-{cleaned[6:8]}"
+    return text
+
+
+def infer_listing_board(code: str, exchange: str) -> str:
+    if exchange == "BJ":
+        return "北交所"
+    if code.startswith(("688", "689")):
+        return "科创板"
+    if code.startswith(("300", "301")):
+        return "创业板"
+    return "主板"
+
+
+def info_frame_to_map(df: pd.DataFrame) -> dict[str, object]:
+    if df.empty or "item" not in df.columns or "value" not in df.columns:
+        return {}
+    return {str(row["item"]).strip(): row["value"] for _, row in df.iterrows()}
 
 
 def resample_kline_frame(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
@@ -153,6 +189,7 @@ class AkshareProvider:
     provider_id = "akshare"
     provider_name = "AKShare CN-A Provider"
     provider_repo = "https://github.com/akfamily/akshare"
+    _linkage_cache: dict[str, tuple[float, SymbolLinkage]] = {}
 
     def health(self) -> HealthPayload:
         return HealthPayload(
@@ -756,5 +793,160 @@ class AkshareProvider:
             updatedAt=now_iso(),
         )
 
+    def get_symbol_profile(self, symbol: str) -> SymbolProfile:
+        code, exchange = split_symbol(symbol)
+        name = f"{code}.{exchange}"
+        industry: str | None = None
+        listing_date: str | None = None
+        total_shares: float | None = None
+        circulating_shares: float | None = None
+        total_market_cap: float | None = None
+        circulating_market_cap: float | None = None
+
+        try:
+            info_df = run_quiet(lambda: ak.stock_individual_info_em(symbol=code))
+            info_map = info_frame_to_map(info_df)
+            name = safe_text(info_map.get("股票简称")) or name
+            industry = safe_text(info_map.get("行业"))
+            listing_date = normalize_listing_date(info_map.get("上市时间"))
+            total_shares = safe_float(info_map.get("总股本"))
+            circulating_shares = safe_float(info_map.get("流通股"))
+            total_market_cap = safe_float(info_map.get("总市值"))
+            circulating_market_cap = safe_float(info_map.get("流通市值"))
+        except Exception as error:
+            logger.warning("akshare symbol profile request failed for %s: %s", symbol, error)
+
+        return SymbolProfile(
+            symbol=f"{code}.{exchange}",
+            name=name,
+            industry=industry,
+            board=infer_listing_board(code, exchange),
+            listingDate=listing_date,
+            totalShares=total_shares,
+            circulatingShares=circulating_shares,
+            totalMarketCap=total_market_cap,
+            circulatingMarketCap=circulating_market_cap,
+            source="akshare",
+            updatedAt=now_iso(),
+        )
+
+    def _build_linkage_snapshot(self, kind: str, row: pd.Series) -> LinkageSnapshot:
+        return LinkageSnapshot(
+            kind=kind,
+            code=pick_text_from_row(row, ["板块代码", "代码"]),
+            name=pick_text_from_row(row, ["板块名称", "名称"]) or "未知",
+            latest=pick_float_from_row(row, ["最新价"]),
+            changePct=pick_float_from_row(row, ["涨跌幅"]),
+            leadingStock=pick_text_from_row(row, ["领涨股票"]),
+            leadingStockChangePct=pick_float_from_row(row, ["领涨股票-涨跌幅", "领涨股涨跌幅"]),
+            upCount=pick_float_from_row(row, ["上涨家数"]),
+            downCount=pick_float_from_row(row, ["下跌家数"]),
+            turnoverRate=pick_float_from_row(row, ["换手率"]),
+            totalMarketCap=pick_float_from_row(row, ["总市值"]),
+        )
+
+    def _get_related_indexes(self) -> list[LinkageSnapshot]:
+        target_codes = {
+            "sh000001": "上证指数",
+            "sz399001": "深证成指",
+            "sz399006": "创业板指",
+        }
+        try:
+            index_df = run_quiet(lambda: ak.stock_zh_index_spot_sina())
+        except Exception as error:
+            logger.warning("akshare index spot request failed: %s", error)
+            return []
+
+        snapshots: list[LinkageSnapshot] = []
+        for _, row in index_df.iterrows():
+            code = safe_text(row.get("代码"))
+            if not code or code not in target_codes:
+                continue
+            snapshots.append(
+                LinkageSnapshot(
+                    kind="index",
+                    code=code,
+                    name=safe_text(row.get("名称")) or target_codes[code],
+                    latest=safe_float(row.get("最新价")),
+                    changePct=safe_float(row.get("涨跌幅")),
+                    leadingStock=None,
+                    leadingStockChangePct=None,
+                    upCount=None,
+                    downCount=None,
+                    turnoverRate=None,
+                    totalMarketCap=None,
+                )
+            )
+        return snapshots
+
+    def _get_industry_board(self, industry: str | None) -> LinkageSnapshot | None:
+        if not industry:
+            return None
+        try:
+            industry_df = run_quiet(lambda: ak.stock_board_industry_name_em())
+        except Exception as error:
+            logger.warning("akshare industry board request failed: %s", error)
+            return None
+
+        if industry_df.empty:
+            return None
+
+        board_name_col = "板块名称" if "板块名称" in industry_df.columns else "名称"
+        matched = industry_df[industry_df[board_name_col].astype(str) == industry]
+        if matched.empty:
+            matched = industry_df[industry_df[board_name_col].astype(str).str.contains(industry, na=False)]
+        if matched.empty:
+            return None
+        return self._build_linkage_snapshot("industry", matched.iloc[0])
+
+    def _get_concept_boards(self, code: str, limit: int = 3) -> list[LinkageSnapshot]:
+        try:
+            concept_df = run_quiet(lambda: ak.stock_board_concept_name_em())
+        except Exception as error:
+            logger.warning("akshare concept board request failed: %s", error)
+            return []
+
+        if concept_df.empty:
+            return []
+
+        snapshots: list[LinkageSnapshot] = []
+        for _, row in concept_df.iterrows():
+            board_symbol = pick_text_from_row(row, ["板块代码", "板块名称", "名称"])
+            if not board_symbol:
+                continue
+
+            try:
+                cons_df = run_quiet(lambda: ak.stock_board_concept_cons_em(symbol=board_symbol))
+            except Exception:
+                continue
+
+            code_col = "代码" if "代码" in cons_df.columns else "股票代码" if "股票代码" in cons_df.columns else None
+            if not code_col:
+                continue
+
+            if cons_df[code_col].astype(str).str.zfill(6).eq(code).any():
+                snapshots.append(self._build_linkage_snapshot("concept", row))
+                if len(snapshots) >= limit:
+                    break
+
+        return snapshots
+
+    def get_symbol_linkage(self, symbol: str) -> SymbolLinkage:
+        cached = self._linkage_cache.get(symbol)
+        now = time.time()
+        if cached and cached[0] > now:
+            return cached[1]
+
+        code, exchange = split_symbol(symbol)
+        profile = self.get_symbol_profile(symbol)
+        linkage = SymbolLinkage(
+            symbol=f"{code}.{exchange}",
+            industryBoard=self._get_industry_board(profile.industry),
+            conceptBoards=self._get_concept_boards(code),
+            relatedIndexes=self._get_related_indexes(),
+            updatedAt=now_iso(),
+        )
+        self._linkage_cache[symbol] = (now + 300, linkage)
+        return linkage
 
 

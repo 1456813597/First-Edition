@@ -78,6 +78,42 @@ class FundamentalSnapshot(BaseModel):
     updatedAt: str
 
 
+class SymbolProfile(BaseModel):
+    symbol: str
+    name: str
+    industry: str | None
+    board: str | None
+    listingDate: str | None
+    totalShares: float | None
+    circulatingShares: float | None
+    totalMarketCap: float | None
+    circulatingMarketCap: float | None
+    source: str
+    updatedAt: str
+
+
+class LinkageSnapshot(BaseModel):
+    kind: Literal["industry", "concept", "index"]
+    code: str | None
+    name: str
+    latest: float | None
+    changePct: float | None
+    leadingStock: str | None
+    leadingStockChangePct: float | None
+    upCount: float | None
+    downCount: float | None
+    turnoverRate: float | None
+    totalMarketCap: float | None
+
+
+class SymbolLinkage(BaseModel):
+    symbol: str
+    industryBoard: LinkageSnapshot | None
+    conceptBoards: list[LinkageSnapshot]
+    relatedIndexes: list[LinkageSnapshot]
+    updatedAt: str
+
+
 class SymbolSearchResult(BaseModel):
     symbol: str
     name: str
@@ -98,4 +134,3 @@ class TradingDaysResponse(BaseModel):
     start: str
     end: str
     tradingDays: list[str] = Field(default_factory=list)
-

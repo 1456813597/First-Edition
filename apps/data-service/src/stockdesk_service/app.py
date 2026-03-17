@@ -4,7 +4,7 @@ from datetime import date
 
 from fastapi import FastAPI, Query
 
-from stockdesk_service.models import FundamentalSnapshot, HealthPayload, QuoteRequest, TradingDaysResponse
+from stockdesk_service.models import FundamentalSnapshot, HealthPayload, QuoteRequest, SymbolLinkage, SymbolProfile, TradingDaysResponse
 from stockdesk_service.providers.factory import create_provider
 from stockdesk_service.utils.calendar import get_trading_days
 
@@ -53,9 +53,18 @@ def fundamentals(symbol: str):
     return provider.get_fundamentals(symbol)
 
 
+@app.get("/profile/{symbol}", response_model=SymbolProfile)
+def profile(symbol: str):
+    return provider.get_symbol_profile(symbol)
+
+
+@app.get("/linkage/{symbol}", response_model=SymbolLinkage)
+def linkage(symbol: str):
+    return provider.get_symbol_linkage(symbol)
+
+
 @app.get("/calendar/trading-days", response_model=TradingDaysResponse)
 def trading_days(start: str, end: str):
     start_date = date.fromisoformat(start)
     end_date = date.fromisoformat(end)
     return TradingDaysResponse(start=start, end=end, tradingDays=get_trading_days(start_date, end_date))
-
