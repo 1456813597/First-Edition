@@ -1,6 +1,6 @@
 import { gzipSync, gunzipSync } from "node:zlib";
 import { eq } from "drizzle-orm";
-import type { AnalysisRun, AnalysisRunDetail, AnalysisRunSummary } from "@stockdesk/shared";
+import type { AnalysisReportV2, AnalysisRun, AnalysisRunDetail, AnalysisRunSummary, LegacyAnalysisResultV1 } from "@stockdesk/shared";
 import { analysisArtifacts, analysisRuns } from "../schema/tables";
 import type { StockdeskDb } from "../database";
 
@@ -16,6 +16,102 @@ function compress(value: string): Buffer {
 
 function decompress(value: Buffer): string {
   return gunzipSync(value).toString("utf8");
+}
+
+function normalizeLegacyResult(
+  result: AnalysisReportV2 | LegacyAnalysisResultV1,
+  symbol: AnalysisRunSummary["symbol"],
+  createdAt: string,
+  forecastWindow: AnalysisRunSummary["forecastWindow"]
+): AnalysisReportV2 {
+  if ((result as AnalysisReportV2).schemaVersion === "analysis_report_v2") {
+    return result as AnalysisReportV2;
+  }
+
+  const legacy = result as LegacyAnalysisResultV1;
+  return {
+    schemaVersion: "analysis_report_v2",
+    symbol,
+    asOf: createdAt,
+    forecastWindow,
+    marketRegime: {
+      summary: legacy.confidence.rationale,
+      bullets: legacy.summaryLines
+    },
+    stance: legacy.stance,
+    confidence: legacy.confidence,
+    summary: legacy.summaryLines,
+    technicalView: {
+      summary: legacy.summaryLines[0] ?? "",
+      bullets: legacy.evidence.filter((item) => item.dimension === "technical").map((item) => item.thesis)
+    },
+    fundamentalView: {
+      summary: legacy.summaryLines[1] ?? "",
+      bullets: legacy.evidence.filter((item) => item.dimension === "event").map((item) => item.thesis)
+    },
+    newsEventView: {
+      summary: legacy.summaryLines[2] ?? "",
+      bullets: legacy.evidence.filter((item) => item.dimension === "news").map((item) => item.thesis)
+    },
+    sectorIndexLinkage: {
+      industry: null,
+      conceptBoards: [],
+      indexSnapshot: [],
+      interpretation: "历史记录来自旧版 analysis.v1，未包含板块与指数联动结构。"
+    },
+    scenarioTree: {
+      bull: {
+        thesis: legacy.summaryLines[0] ?? "",
+        probabilityLabel: "旧版未提供",
+        triggerSignals: legacy.invalidationSignals.slice(0, 2),
+        targetChangePctRange: legacy.targetChangePctRange
+      },
+      base: {
+        thesis: legacy.summaryLines[1] ?? "",
+        probabilityLabel: "旧版未提供",
+        triggerSignals: legacy.invalidationSignals.slice(0, 2),
+        targetChangePctRange: legacy.targetChangePctRange
+      },
+      bear: {
+        thesis: legacy.summaryLines[2] ?? "",
+        probabilityLabel: "旧版未提供",
+        triggerSignals: legacy.invalidationSignals.slice(0, 2),
+        targetChangePctRange: legacy.targetChangePctRange
+      }
+    },
+    riskMatrix: legacy.risks.map((risk) => ({
+      level: "medium" as const,
+      title: risk,
+      detail: risk,
+      mitigation: "历史记录来自旧版 analysis.v1，请结合最新数据重新评估。"
+    })),
+    invalidationSignals: legacy.invalidationSignals,
+    actionPlan: {
+      observationLevels: legacy.actionPlan.observationLevels,
+      entryIdea: "历史记录来自旧版 analysis.v1，未提供明确 entryIdea。",
+      stopLossIdea: legacy.actionPlan.stopLossIdea,
+      takeProfitIdea: legacy.actionPlan.takeProfitIdea,
+      positionSizingIdea: "历史记录来自旧版 analysis.v1，未提供明确仓位建议。",
+      disclaimer: "仅供研究参考，不构成投资建议"
+    },
+    evidence: legacy.evidence.map((item, index) => ({
+      id: `legacy-${index + 1}`,
+      dimension:
+        item.dimension === "technical"
+          ? "technical"
+          : item.dimension === "data_quality"
+            ? "data_quality"
+            : "news_event",
+      thesis: item.thesis,
+      refs: item.featureRefs
+    })),
+    dataQuality: {
+      sufficiency: legacy.dataSufficiency,
+      flags: legacy.evidence.filter((item) => item.dimension === "data_quality").map((item) => item.thesis),
+      missingPieces: []
+    },
+    disclaimer: "仅供研究参考，不构成投资建议"
+  };
 }
 
 export class AnalysisRepo {
@@ -84,6 +180,10 @@ export class AnalysisRepo {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  listRecentRunsBySymbol(symbol: string, limit = 5): AnalysisRunSummary[] {
+    return this.listRuns({ symbol }).slice(0, limit);
+  }
+
   getRun(id: string): AnalysisRunDetail | null {
     const row = this.db.select().from(analysisRuns).where(eq(analysisRuns.id, id)).get();
     const artifact = this.db.select().from(analysisArtifacts).where(eq(analysisArtifacts.runId, id)).get();
@@ -91,7 +191,8 @@ export class AnalysisRepo {
       return null;
     }
 
-    const result = JSON.parse(decompress(artifact.parsedResponse));
+    const parsedResult = JSON.parse(decompress(artifact.parsedResponse)) as AnalysisReportV2 | LegacyAnalysisResultV1;
+    const result = normalizeLegacyResult(parsedResult, row.symbol as AnalysisRunDetail["symbol"], row.createdAt, row.forecastWindow as AnalysisRunDetail["forecastWindow"]);
     return {
       id: row.id,
       symbol: row.symbol as AnalysisRunDetail["symbol"],

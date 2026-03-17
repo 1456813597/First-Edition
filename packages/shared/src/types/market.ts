@@ -87,6 +87,42 @@ export interface FundamentalSnapshot {
   updatedAt: string;
 }
 
+export interface SymbolProfile {
+  symbol: SymbolId;
+  name: string;
+  industry: string | null;
+  board: string | null;
+  listingDate: string | null;
+  totalShares: number | null;
+  circulatingShares: number | null;
+  totalMarketCap: number | null;
+  circulatingMarketCap: number | null;
+  source: string;
+  updatedAt: string;
+}
+
+export interface LinkageSnapshot {
+  kind: "industry" | "concept" | "index";
+  code: string | null;
+  name: string;
+  latest: number | null;
+  changePct: number | null;
+  leadingStock: string | null;
+  leadingStockChangePct: number | null;
+  upCount: number | null;
+  downCount: number | null;
+  turnoverRate: number | null;
+  totalMarketCap: number | null;
+}
+
+export interface SymbolLinkage {
+  symbol: SymbolId;
+  industryBoard: LinkageSnapshot | null;
+  conceptBoards: LinkageSnapshot[];
+  relatedIndexes: LinkageSnapshot[];
+  updatedAt: string;
+}
+
 export interface TradingCalendarRange {
   start: string;
   end: string;

@@ -1,30 +1,44 @@
-﻿.page {
+.page {
   display: grid;
   gap: 18px;
+  color: var(--app-text);
 }
 
-.page span {
-  color: #8db5de;
+.header {
+  display: grid;
+  gap: 10px;
+}
+
+.header span {
+  color: var(--app-text-muted);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-size: 12px;
 }
 
-.page h2 {
-  margin: 8px 0 0;
-  font-size: 34px;
+.header h2 {
+  margin: 0;
+  font-size: clamp(30px, 3vw, 42px);
+  letter-spacing: -0.04em;
+}
+
+.emptyState,
+.list,
+.detail {
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.68));
+  border: 1px solid var(--app-border);
+  backdrop-filter: blur(24px);
 }
 
 .emptyState {
   padding: 28px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
   gap: 12px;
 }
 
-.emptyState h3 {
+.emptyState h3,
+.detailHead h3 {
   margin: 0;
 }
 
@@ -37,23 +51,23 @@
   justify-self: start;
   padding: 10px 14px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #2d5d92, #4f8fca);
+  background: rgba(96, 165, 250, 0.18);
   color: #eff5ff;
 }
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) 180px 170px 170px 130px 1fr;
+  grid-template-columns: minmax(220px, 320px) 180px 170px 170px 150px 1fr;
   gap: 12px;
   align-items: end;
 }
 
-.filters input,
-.filters select {
+.filters select,
+.dateField input {
   border: 0;
   border-radius: 14px;
   padding: 11px 12px;
-  background: rgba(0, 0, 0, 0.24);
+  background: rgba(2, 6, 23, 0.34);
   color: #fff;
 }
 
@@ -65,22 +79,14 @@
 .dateField span {
   text-transform: none;
   letter-spacing: normal;
-  color: #a8c3de;
+  color: var(--app-text-muted);
   font-size: 12px;
-}
-
-.clearButton {
-  border: 0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #d7e7f8;
 }
 
 .count {
   justify-self: end;
   align-self: center;
-  color: #aac4de;
+  color: var(--app-text-muted);
   font-size: 13px;
 }
 
@@ -88,18 +94,6 @@
   display: flex;
   gap: 10px;
   align-items: center;
-}
-
-.exportBar button {
-  border: 0;
-  border-radius: 12px;
-  padding: 9px 12px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e7f1ff;
-}
-
-.exportBar button:disabled {
-  opacity: 0.45;
 }
 
 .exportBar span {
@@ -115,13 +109,6 @@
   gap: 16px;
 }
 
-.list,
-.detail {
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 .list {
   padding: 12px;
   display: grid;
@@ -133,12 +120,12 @@
 
 .card {
   border: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   text-align: left;
-  padding: 12px;
+  padding: 14px;
   display: grid;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(2, 6, 23, 0.26);
   color: #dbe9f7;
   cursor: pointer;
 }
@@ -163,9 +150,13 @@
   color: #99b4ce;
 }
 
+.statusRow {
+  color: #99b4ce;
+}
+
 .active {
-  background: linear-gradient(135deg, rgba(41, 87, 136, 0.64), rgba(74, 136, 199, 0.46));
-  border: 1px solid rgba(112, 170, 224, 0.55);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.26), rgba(14, 165, 233, 0.14));
+  border: 1px solid rgba(96, 165, 250, 0.28);
 }
 
 .emptyList {
@@ -187,13 +178,9 @@
   align-items: end;
 }
 
-.detailHead h3 {
-  margin: 0;
-}
-
 .detailHead span {
   font-size: 12px;
-  color: #a7bfd8;
+  color: var(--app-text-muted);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -201,13 +188,13 @@
 .detailHead a {
   padding: 8px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(148, 163, 184, 0.08);
   color: #c8e4ff;
 }
 
 .section {
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .section h4 {
@@ -227,12 +214,34 @@
   color: #bfd1e4;
 }
 
+.timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.timelineItem {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.24);
+}
+
+.timelineItem p {
+  margin: 0;
+  color: #bfd1e4;
+}
+
+.timelineItem small {
+  color: #99b4ce;
+}
+
 .hint {
-  color: #9fb6cf;
+  color: var(--app-text-muted);
 }
 
 .error {
-  color: #ffb7b7;
+  color: #fecaca;
 }
 
 @media (max-width: 1320px) {
@@ -253,20 +262,5 @@
 
   .list {
     max-height: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .filters {
-    grid-template-columns: 1fr;
-  }
-
-  .detailHead {
-    flex-direction: column;
-    align-items: start;
-  }
-
-  .exportBar {
-    flex-wrap: wrap;
   }
 }

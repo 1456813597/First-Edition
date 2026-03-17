@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { app } from "electron";
-import { createDatabase, AlertRepo, AnalysisRepo, CacheRepo, SettingsRepo, WatchlistRepo } from "@stockdesk/db";
+import { createDatabase, AlertRepo, AnalysisRepo, AnalysisTaskRepo, CacheRepo, SettingsRepo, WatchlistRepo } from "@stockdesk/db";
 import { AlertService } from "./services/alertService";
 import { AnalysisService } from "./services/analysisService";
 import { DataServiceClient } from "./services/dataServiceClient";
@@ -17,6 +17,7 @@ export interface AppContext {
   settingsRepo: SettingsRepo;
   cacheRepo: CacheRepo;
   analysisRepo: AnalysisRepo;
+  analysisTaskRepo: AnalysisTaskRepo;
   alertRepo: AlertRepo;
   secretManager: SecretManager;
   analysisService: AnalysisService;
@@ -29,12 +30,10 @@ function resolveDataServiceRoot() {
     process.env.STOCKDESK_DATA_SERVICE_ROOT,
     path.join(process.cwd(), "apps", "data-service"),
     path.join(process.cwd(), "data-service"),
-    path.join(process.cwd(), "apps", "apps", "data-service"),
     path.join(app.getAppPath(), "..", "data-service"),
     path.join(app.getAppPath(), "..", "..", "data-service"),
     path.join(path.resolve(__dirname, "../../../.."), "apps", "data-service"),
-    path.join(path.resolve(__dirname, "../../../.."), "data-service"),
-    path.join(path.resolve(__dirname, "../../../.."), "apps", "apps", "data-service")
+    path.join(path.resolve(__dirname, "../../../.."), "data-service")
   ]
     .filter((value): value is string => Boolean(value))
     .map((value) => path.resolve(value));
@@ -66,6 +65,7 @@ export async function createAppContext(): Promise<AppContext> {
   const settingsRepo = new SettingsRepo(db);
   const cacheRepo = new CacheRepo(db);
   const analysisRepo = new AnalysisRepo(db);
+  const analysisTaskRepo = new AnalysisTaskRepo(db);
   const alertRepo = new AlertRepo(db);
   const secretManager = new SecretManager({
     serviceRoot: dataServiceRoot
@@ -74,6 +74,7 @@ export async function createAppContext(): Promise<AppContext> {
     dataServiceClient,
     settingsRepo,
     analysisRepo,
+    analysisTaskRepo,
     secretManager
   });
   const alertService = new AlertService({
@@ -94,6 +95,7 @@ export async function createAppContext(): Promise<AppContext> {
     settingsRepo,
     cacheRepo,
     analysisRepo,
+    analysisTaskRepo,
     alertRepo,
     secretManager,
     analysisService,

@@ -77,6 +77,14 @@ powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\p
 
 - `uv sync` 确保本地 Python 数据服务依赖齐全
 - 桌面主进程开发态会调用 `apps/data-service/.venv/Scripts/python.exe`
+- 当前桌面端绑定的是内嵌本地数据服务，设置页中的数据源信息只用于展示当前实际生效的本地服务状态，不支持切到外部 provider URL
+
+## 3.1 环境版本建议
+
+- Node: `22.22.0`（仓库内置 Windows 版）
+- Python: `3.13+`
+- pnpm: `10.16.1`
+- Windows: 优先在 Windows 11 上联调和打包
 
 ---
 

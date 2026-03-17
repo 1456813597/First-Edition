@@ -11,6 +11,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.tsbuildinfo
 *.db
 *.db-shm
 *.db-wal
@@ -20,4 +21,3 @@ apps/desktop/out/
 apps/data-service/dist/
 apps/data-service/build/
 apps/data-service/*.spec
-

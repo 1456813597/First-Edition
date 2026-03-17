@@ -1,11 +1,17 @@
+export type LlmProtocol = "openai_responses" | "openai_chat_compatible" | "openrouter_api" | "bailian_responses_cn";
+export type LlmProbeMode = "models_only" | "models_then_minimal";
+
 export interface LlmProfile {
   id: string;
   name: string;
+  protocol: LlmProtocol;
+  displayProviderName: string;
   baseUrl: string;
   model: string;
   timeoutMs: number;
   maxRetries: number;
   supportsJsonSchema: boolean;
+  advancedHeaders: Record<string, string> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,4 +58,3 @@ export interface TestResult {
   message: string;
   details?: Record<string, string | number | boolean | null>;
 }
-

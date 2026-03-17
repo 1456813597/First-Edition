@@ -76,3 +76,39 @@ export const fundamentalSnapshotSchema = z.object({
   source: z.string(),
   updatedAt: isoDateTimeSchema
 });
+
+export const symbolProfileSchema = z.object({
+  symbol: symbolIdSchema,
+  name: z.string(),
+  industry: z.string().nullable(),
+  board: z.string().nullable(),
+  listingDate: z.string().nullable(),
+  totalShares: z.number().nullable(),
+  circulatingShares: z.number().nullable(),
+  totalMarketCap: z.number().nullable(),
+  circulatingMarketCap: z.number().nullable(),
+  source: z.string(),
+  updatedAt: isoDateTimeSchema
+});
+
+export const linkageSnapshotSchema = z.object({
+  kind: z.enum(["industry", "concept", "index"]),
+  code: z.string().nullable(),
+  name: z.string(),
+  latest: z.number().nullable(),
+  changePct: z.number().nullable(),
+  leadingStock: z.string().nullable(),
+  leadingStockChangePct: z.number().nullable(),
+  upCount: z.number().nullable(),
+  downCount: z.number().nullable(),
+  turnoverRate: z.number().nullable(),
+  totalMarketCap: z.number().nullable()
+});
+
+export const symbolLinkageSchema = z.object({
+  symbol: symbolIdSchema,
+  industryBoard: linkageSnapshotSchema.nullable(),
+  conceptBoards: z.array(linkageSnapshotSchema),
+  relatedIndexes: z.array(linkageSnapshotSchema),
+  updatedAt: isoDateTimeSchema
+});

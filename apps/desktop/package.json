@@ -13,6 +13,8 @@
     "lint": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.73.3",
+    "@fluentui/react-icons": "^2.0.321",
     "@stockdesk/analysis-core": "workspace:*",
     "@stockdesk/db": "workspace:*",
     "@stockdesk/shared": "workspace:*",
@@ -37,7 +39,9 @@
   "build": {
     "appId": "com.stockdesk.desktop",
     "productName": "StockDesk",
-    "asarUnpack": ["**/*.node"],
+    "asarUnpack": [
+      "**/*.node"
+    ],
     "directories": {
       "buildResources": "build"
     },
@@ -49,7 +53,9 @@
       {
         "from": "../data-service/packaging",
         "to": "python-service",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "nsis": {
@@ -58,7 +64,9 @@
       "allowToChangeInstallationDirectory": true
     },
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     }
   }
 }

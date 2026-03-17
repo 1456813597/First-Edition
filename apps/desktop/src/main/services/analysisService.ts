@@ -1,37 +1,43 @@
-﻿import { buildFeaturePack, buildSystemPrompt, buildUserPrompt } from "@stockdesk/analysis-core";
-import { AnalysisRepo, SettingsRepo } from "@stockdesk/db";
+import { AnalysisRepo, AnalysisTaskRepo, SettingsRepo } from "@stockdesk/db";
 import {
   nowIso,
   type AnalysisQueueItem,
   type AnalysisQueueStatus,
   type AnalysisRun,
   type AnalysisRunInput,
-  type ForecastWindow,
-  type LlmProfile,
-  type SymbolId
+  type AnalysisStartTaskInput,
+  type AnalysisTaskStatus,
+  type AnalysisTaskSummary,
+  type LlmProbeMode,
+  type LlmProfile
 } from "@stockdesk/shared";
 import { DataServiceClient } from "./dataServiceClient";
 import { LlmClient } from "./llmClient";
+import { ANALYSIS_STAGES, ANALYSIS_WORKFLOW_ID, AnalysisWorkflowRunner, type QueueTask } from "./analysisWorkflowRunner";
 import { SecretManager } from "./secretManager";
 
-interface QueueTask {
-  queueItem: AnalysisQueueItem;
-  input: AnalysisRunInput;
+interface Waiter {
   resolve(value: AnalysisRun): void;
   reject(reason?: unknown): void;
 }
 
-function summaryFromMarket(symbol: SymbolId, window: ForecastWindow) {
-  return [
-    `标的 ${symbol} 当前分析窗口为 ${window}。`,
-    "市场摘要首版未接入宽基指数强弱对比，结论更依赖个股特征与事件输入。",
-    "若数据质量标记较多，应降低置信度并优先观察反证条件。"
-  ];
+function taskQueueItem(task: AnalysisTaskSummary): AnalysisQueueItem {
+  return {
+    id: task.id,
+    symbol: task.symbol,
+    templateId: task.templateId,
+    workflowId: task.workflowId,
+    stageKey: task.currentStageKey,
+    status: task.status,
+    enqueuedAt: task.createdAt
+  };
 }
 
 export class AnalysisService {
   private readonly llmClient = new LlmClient();
   private readonly queue: QueueTask[] = [];
+  private readonly waiters = new Map<string, Waiter>();
+  private readonly workflowRunner: AnalysisWorkflowRunner;
   private running: QueueTask | null = null;
   private updatedAt = nowIso();
 
@@ -40,33 +46,146 @@ export class AnalysisService {
       dataServiceClient: DataServiceClient;
       settingsRepo: SettingsRepo;
       analysisRepo: AnalysisRepo;
+      analysisTaskRepo: AnalysisTaskRepo;
       secretManager: SecretManager;
     }
-  ) {}
+  ) {
+    this.workflowRunner = new AnalysisWorkflowRunner({
+      dataServiceClient: deps.dataServiceClient,
+      analysisRepo: deps.analysisRepo,
+      analysisTaskRepo: deps.analysisTaskRepo
+    });
+  }
+
+  private resolveProfile(input: AnalysisRunInput): LlmProfile {
+    const settings = this.deps.settingsRepo.getSettings();
+    const profile = settings?.llmProfiles.find((item) => item.id === input.llmProfileId) ?? null;
+    if (!profile) {
+      throw new Error("LLM profile not found.");
+    }
+    return profile;
+  }
+
+  async startTask(input: AnalysisStartTaskInput): Promise<AnalysisTaskSummary> {
+    return this.createTask(input);
+  }
 
   async enqueue(input: AnalysisRunInput): Promise<AnalysisRun> {
-    const queueItem: AnalysisQueueItem = {
-      id: crypto.randomUUID(),
-      symbol: input.symbol,
-      templateId: input.templateId,
-      forecastWindow: input.forecastWindow,
-      enqueuedAt: nowIso()
-    };
-
+    const task = await this.createTask(input, true);
     return new Promise<AnalysisRun>((resolve, reject) => {
-      this.queue.push({ queueItem, input, resolve, reject });
-      this.updatedAt = nowIso();
-      void this.processQueue();
+      this.waiters.set(task.id, { resolve, reject });
+    });
+  }
+
+  listTasks(filter?: { symbol?: string; status?: AnalysisTaskStatus; limit?: number }) {
+    return this.deps.analysisTaskRepo.listTasks(filter);
+  }
+
+  getTask(id: string) {
+    return this.deps.analysisTaskRepo.getTask(id);
+  }
+
+  getTaskStages(taskId: string) {
+    return this.deps.analysisTaskRepo.listStageRuns(taskId);
+  }
+
+  cancelTask(id: string) {
+    const queuedIndex = this.queue.findIndex((item) => item.taskId === id);
+    if (queuedIndex < 0) {
+      throw new Error("Only pending tasks can be cancelled.");
+    }
+    this.queue.splice(queuedIndex, 1);
+    this.updatedAt = nowIso();
+    return this.deps.analysisTaskRepo.updateTask(id, {
+      status: "cancelled",
+      completedAt: nowIso(),
+      errorSummary: "Task cancelled before execution.",
+      currentStageKey: null,
+      currentStageStatus: "cancelled"
     });
   }
 
   getQueueStatus(): AnalysisQueueStatus {
+    const runningTask = this.running ? this.deps.analysisTaskRepo.getTask(this.running.taskId) : null;
     return {
-      running: this.running?.queueItem ?? null,
-      pending: this.queue.map((task) => task.queueItem),
+      running: runningTask ? taskQueueItem(runningTask) : null,
+      pending: this.queue
+        .map((task) => this.deps.analysisTaskRepo.getTask(task.taskId))
+        .filter((task): task is AnalysisTaskSummary => Boolean(task))
+        .map(taskQueueItem),
       totalPending: this.queue.length,
       updatedAt: this.updatedAt
     };
+  }
+
+  async testProfile(profile: LlmProfile, probeMode: LlmProbeMode = "models_then_minimal") {
+    const apiKey = await this.deps.secretManager.get(profile.id);
+    if (!apiKey) {
+      throw new Error("API key missing.");
+    }
+    await this.llmClient.testProfile(profile, apiKey, probeMode);
+  }
+
+  private async createTask(input: AnalysisStartTaskInput, preserveShim = false): Promise<AnalysisTaskSummary> {
+    if (input.workflowId && input.workflowId !== ANALYSIS_WORKFLOW_ID) {
+      throw new Error(`Unsupported workflowId: ${input.workflowId}`);
+    }
+
+    const profile = this.resolveProfile(input);
+    const createdAt = nowIso();
+    const workflowId = input.workflowId ?? ANALYSIS_WORKFLOW_ID;
+    const taskId = crypto.randomUUID();
+    const task = this.deps.analysisTaskRepo.createTaskWithStageRuns({
+      id: taskId,
+      symbol: input.symbol,
+      workflowId,
+      templateId: input.templateId,
+      llmProfileId: input.llmProfileId,
+      protocol: profile.protocol,
+      status: "pending",
+      createdAt,
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+      errorSummary: null,
+      finalRunId: null,
+      currentStageKey: null,
+      currentStageStatus: null
+    }, ANALYSIS_STAGES.map((stage) => ({
+      id: crypto.randomUUID(),
+      taskId,
+      stageKey: stage.key,
+      stageOrder: stage.order,
+      actorKind: stage.actorKind,
+      status: "pending",
+      model: null,
+      title: stage.title,
+      summary: "",
+      startedAt: null,
+      completedAt: null,
+      inputPayload: null,
+      outputPayload: null,
+      rawPayload: null,
+      usagePayload: null,
+      errorSummary: null
+    })));
+
+    this.queue.push({
+      taskId: task.id,
+      input: {
+        ...input,
+        workflowId
+      }
+    });
+    this.updatedAt = nowIso();
+    if (!preserveShim) {
+      void this.processQueue();
+    } else {
+      queueMicrotask(() => {
+        void this.processQueue();
+      });
+    }
+    return task;
   }
 
   private async processQueue() {
@@ -83,10 +202,25 @@ export class AnalysisService {
     this.updatedAt = nowIso();
 
     try {
-      const result = await this.runNow(task.input);
-      task.resolve(result);
+      const profile = this.resolveProfile(task.input);
+      const apiKey = await this.deps.secretManager.get(profile.id);
+      if (!apiKey) {
+        throw new Error("LLM API key is missing.");
+      }
+
+      const result = await this.workflowRunner.runTask(task, profile, apiKey, this.llmClient);
+      const waiter = this.waiters.get(task.taskId);
+      if (waiter) {
+        waiter.resolve(result);
+        this.waiters.delete(task.taskId);
+      }
     } catch (error) {
-      task.reject(error);
+      this.markTaskFailed(task.taskId, error);
+      const waiter = this.waiters.get(task.taskId);
+      if (waiter) {
+        waiter.reject(error);
+        this.waiters.delete(task.taskId);
+      }
     } finally {
       this.running = null;
       this.updatedAt = nowIso();
@@ -94,95 +228,18 @@ export class AnalysisService {
     }
   }
 
-  private async runNow(input: AnalysisRunInput): Promise<AnalysisRun> {
-    const settings = this.deps.settingsRepo.getSettings();
-    const profile = settings?.llmProfiles.find((item) => item.id === input.llmProfileId);
-    if (!profile) {
-      throw new Error("LLM profile not found.");
+  private markTaskFailed(taskId: string, error: unknown) {
+    const task = this.deps.analysisTaskRepo.getTask(taskId);
+    if (!task || task.status === "failed" || task.status === "cancelled" || task.status === "completed") {
+      return;
     }
 
-    const apiKey = await this.deps.secretManager.get(profile.id);
-    if (!apiKey) {
-      throw new Error("LLM API key is missing.");
-    }
-
-    const quote = (await this.deps.dataServiceClient.getQuotes([input.symbol]))[0] ?? null;
-    const daily = await this.deps.dataServiceClient.getKline({
-      symbol: input.symbol,
-      timeframe: "1d",
-      adjustMode: "qfq"
+    const message = error instanceof Error ? error.message : String(error);
+    this.deps.analysisTaskRepo.updateTask(taskId, {
+      status: "failed",
+      failedAt: task.failedAt ?? nowIso(),
+      errorSummary: message,
+      currentStageStatus: "failed"
     });
-    const intraday = await this.deps.dataServiceClient.getKline({
-      symbol: input.symbol,
-      timeframe: "1m",
-      adjustMode: "none"
-    });
-    const news = await this.deps.dataServiceClient.getNews(input.symbol, { limit: 8 });
-    const events = await this.deps.dataServiceClient.getEvents(input.symbol, { limit: 8 });
-    const featurePack = buildFeaturePack({
-      symbol: input.symbol,
-      quote,
-      dailyBars: daily.bars,
-      intradayBars: intraday.bars,
-      news,
-      events,
-      marketSummary: summaryFromMarket(input.symbol, input.forecastWindow)
-    });
-
-    const systemPrompt = buildSystemPrompt(input.templateId);
-    const userPrompt = buildUserPrompt({
-      templateId: input.templateId,
-      forecastWindow: input.forecastWindow,
-      featurePack
-    });
-    const llm = await this.llmClient.analyze({
-      profile,
-      apiKey,
-      systemPrompt,
-      userPrompt
-    });
-
-    const createdAt = nowIso();
-    const run: AnalysisRun = {
-      id: crypto.randomUUID(),
-      symbol: input.symbol,
-      templateId: input.templateId,
-      stance: llm.result.stance,
-      confidenceScore: llm.result.confidence.score,
-      forecastWindow: input.forecastWindow,
-      createdAt,
-      summary: llm.result.summaryLines.join(" "),
-      result: llm.result,
-      featurePack
-    };
-
-    this.deps.analysisRepo.saveRun(run, {
-      promptRequest: JSON.stringify({
-        profile,
-        systemPrompt,
-        userPrompt
-      }),
-      rawResponse: llm.rawResponse,
-      validationReport: llm.validationReport,
-      llmProfileId: profile.id
-    });
-
-    return run;
-  }
-
-  async testProfile(profile: LlmProfile) {
-    const apiKey = await this.deps.secretManager.get(profile.id);
-    if (!apiKey) {
-      throw new Error("API key missing.");
-    }
-
-    const response = await fetch(new URL("/models", profile.baseUrl).toString(), {
-      headers: {
-        Authorization: `Bearer ${apiKey}`
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`LLM profile test failed with ${response.status}`);
-    }
   }
 }

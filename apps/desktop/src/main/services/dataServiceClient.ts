@@ -4,12 +4,17 @@ import {
   klineSeriesSchema,
   newsItemSchema,
   quoteSnapshotSchema,
+  symbolLinkageSchema,
+  symbolProfileSchema,
   type AdjustMode,
   type EventItem,
   type FundamentalSnapshot,
   type KlineSeries,
+  type LinkageSnapshot,
   type NewsItem,
   type QuoteSnapshot,
+  type SymbolLinkage,
+  type SymbolProfile,
   type SymbolId,
   type Timeframe
 } from "@stockdesk/shared";
@@ -23,6 +28,12 @@ export interface DataServiceHealth {
   quoteSource?: string;
   klineSource?: string;
   newsSource?: string;
+}
+
+interface TradingDaysResponse {
+  start: string;
+  end: string;
+  tradingDays: string[];
 }
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -102,6 +113,18 @@ export class DataServiceClient {
     return fundamentalSnapshotSchema.parse(payload);
   }
 
+  async getSymbolProfile(symbol: SymbolId): Promise<SymbolProfile> {
+    const response = await fetch(`${this.baseUrl}/profile/${symbol}`);
+    const payload = await parseJson<unknown>(response);
+    return symbolProfileSchema.parse(payload);
+  }
+
+  async getSymbolLinkage(symbol: SymbolId): Promise<SymbolLinkage> {
+    const response = await fetch(`${this.baseUrl}/linkage/${symbol}`);
+    const payload = await parseJson<unknown>(response);
+    return symbolLinkageSchema.parse(payload);
+  }
+
   async searchSymbols(query: string) {
     const response = await fetch(`${this.baseUrl}/symbols/search?q=${encodeURIComponent(query)}&limit=20`);
     return parseJson<Array<{ symbol: string; name: string }>>(response);
@@ -110,6 +133,12 @@ export class DataServiceClient {
   async getHealth(): Promise<DataServiceHealth> {
     const response = await fetch(`${this.baseUrl}/health`);
     return parseJson<DataServiceHealth>(response);
+  }
+
+  async getTradingDays(start: string, end: string): Promise<TradingDaysResponse> {
+    const query = new URLSearchParams({ start, end });
+    const response = await fetch(`${this.baseUrl}/calendar/trading-days?${query.toString()}`);
+    return parseJson<TradingDaysResponse>(response);
   }
 
   async healthCheck() {

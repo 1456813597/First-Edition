@@ -25,11 +25,18 @@ contextBridge.exposeInMainWorld("stockdesk", {
     getKline: (input: IpcInput<"market:getKline">) => invoke("market:getKline", input),
     getNews: (input: IpcInput<"market:getNews">) => invoke("market:getNews", input),
     getEvents: (input: IpcInput<"market:getEvents">) => invoke("market:getEvents", input),
-    getFundamentals: (symbol: string) => invoke("market:getFundamentals", { symbol })
+    getFundamentals: (symbol: string) => invoke("market:getFundamentals", { symbol }),
+    getSymbolProfile: (symbol: string) => invoke("market:getSymbolProfile", { symbol }),
+    getSymbolLinkage: (symbol: string) => invoke("market:getSymbolLinkage", { symbol })
   },
   analysis: {
     run: (input: IpcInput<"analysis:run">) => invoke("analysis:run", input),
+    startTask: (input: IpcInput<"analysis:startTask">) => invoke("analysis:startTask", input),
     listRuns: (filter?: IpcInput<"analysis:listRuns">) => invoke("analysis:listRuns", filter),
+    listTasks: (filter?: IpcInput<"analysis:listTasks">) => invoke("analysis:listTasks", filter),
+    getTask: (id: string) => invoke("analysis:getTask", { id }),
+    getTaskStages: (taskId: string) => invoke("analysis:getTaskStages", { taskId }),
+    cancelTask: (id: string) => invoke("analysis:cancelTask", { id }),
     getRun: (id: string) => invoke("analysis:getRun", { id }),
     getQueueStatus: () => invoke("analysis:getQueueStatus", undefined),
     exportRuns: (input: IpcInput<"analysis:exportRuns">) => invoke("analysis:exportRuns", input)
@@ -46,7 +53,11 @@ contextBridge.exposeInMainWorld("stockdesk", {
     get: () => invoke("settings:get", undefined),
     save: (input: IpcInput<"settings:save">) => invoke("settings:save", input),
     testDataSource: (profileId?: string) => invoke("settings:testDataSource", profileId ? { profileId } : undefined),
-    testLlmProfile: (profileId: string) => invoke("settings:testLlmProfile", { profileId }),
+    testLlmProfile: (
+      profileId: string,
+      draft?: IpcInput<"settings:testLlmProfile">["draft"],
+      probeMode?: IpcInput<"settings:testLlmProfile">["probeMode"]
+    ) => invoke("settings:testLlmProfile", { profileId, draft, probeMode }),
     clearSecrets: (profileId: string) => invoke("settings:clearSecrets", { profileId })
   },
   system: {
@@ -78,10 +89,17 @@ declare global {
         getNews(input: IpcInput<"market:getNews">): Promise<IpcOutput<"market:getNews">>;
         getEvents(input: IpcInput<"market:getEvents">): Promise<IpcOutput<"market:getEvents">>;
         getFundamentals(symbol: string): Promise<IpcOutput<"market:getFundamentals">>;
+        getSymbolProfile(symbol: string): Promise<IpcOutput<"market:getSymbolProfile">>;
+        getSymbolLinkage(symbol: string): Promise<IpcOutput<"market:getSymbolLinkage">>;
       };
       analysis: {
         run(input: IpcInput<"analysis:run">): Promise<IpcOutput<"analysis:run">>;
+        startTask(input: IpcInput<"analysis:startTask">): Promise<IpcOutput<"analysis:startTask">>;
         listRuns(filter?: IpcInput<"analysis:listRuns">): Promise<IpcOutput<"analysis:listRuns">>;
+        listTasks(filter?: IpcInput<"analysis:listTasks">): Promise<IpcOutput<"analysis:listTasks">>;
+        getTask(id: string): Promise<IpcOutput<"analysis:getTask">>;
+        getTaskStages(taskId: string): Promise<IpcOutput<"analysis:getTaskStages">>;
+        cancelTask(id: string): Promise<IpcOutput<"analysis:cancelTask">>;
         getRun(id: string): Promise<IpcOutput<"analysis:getRun">>;
         getQueueStatus(): Promise<IpcOutput<"analysis:getQueueStatus">>;
         exportRuns(input: IpcInput<"analysis:exportRuns">): Promise<IpcOutput<"analysis:exportRuns">>;
@@ -98,7 +116,11 @@ declare global {
         get(): Promise<IpcOutput<"settings:get">>;
         save(input: IpcInput<"settings:save">): Promise<IpcOutput<"settings:save">>;
         testDataSource(profileId?: string): Promise<IpcOutput<"settings:testDataSource">>;
-        testLlmProfile(profileId: string): Promise<IpcOutput<"settings:testLlmProfile">>;
+        testLlmProfile(
+          profileId: string,
+          draft?: IpcInput<"settings:testLlmProfile">["draft"],
+          probeMode?: IpcInput<"settings:testLlmProfile">["probeMode"]
+        ): Promise<IpcOutput<"settings:testLlmProfile">>;
         clearSecrets(profileId: string): Promise<void>;
       };
       system: {

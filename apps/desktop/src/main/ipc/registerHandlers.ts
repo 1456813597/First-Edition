@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ipcMain, dialog, shell, type IpcMainInvokeEvent } from "electron";
-import { ipcContract, type IpcChannel, type ImportPreview, type QuoteSnapshot, saveSettingsInputSchema } from "@stockdesk/shared";
+import { ipcContract, type AnalysisTaskFilter, type IpcChannel, type ImportPreview, type LlmProbeMode, type LlmProtocol, type QuoteSnapshot, saveSettingsInputSchema } from "@stockdesk/shared";
 import { attachIndicators } from "@stockdesk/analysis-core";
 import type { AppContext } from "../appContext";
 
@@ -176,11 +176,30 @@ export function registerHandlers(context: AppContext) {
     const typed = input as { symbol: `${string}.${"SH" | "SZ" | "BJ"}` };
     return context.dataServiceClient.getFundamentals(typed.symbol);
   });
+  handle("market:getSymbolProfile", async (input) => {
+    const typed = input as { symbol: `${string}.${"SH" | "SZ" | "BJ"}` };
+    return context.dataServiceClient.getSymbolProfile(typed.symbol);
+  });
+  handle("market:getSymbolLinkage", async (input) => {
+    const typed = input as { symbol: `${string}.${"SH" | "SZ" | "BJ"}` };
+    return context.dataServiceClient.getSymbolLinkage(typed.symbol);
+  });
 
   handle("analysis:run", async (input) => context.analysisService.enqueue(input as Parameters<AppContext["analysisService"]["enqueue"]>[0]));
+  handle("analysis:startTask", async (input) => context.analysisService.startTask(input as Parameters<AppContext["analysisService"]["startTask"]>[0]));
   handle("analysis:listRuns", async (input) =>
     context.analysisRepo.listRuns(input as { symbol?: string; start?: string; end?: string } | undefined)
   );
+  handle("analysis:listTasks", async (input) => context.analysisService.listTasks(input as AnalysisTaskFilter | undefined));
+  handle("analysis:getTask", async (input) => {
+    const task = context.analysisService.getTask((input as { id: string }).id);
+    if (!task) {
+      throw new Error("Analysis task not found.");
+    }
+    return task;
+  });
+  handle("analysis:getTaskStages", async (input) => context.analysisService.getTaskStages((input as { taskId: string }).taskId));
+  handle("analysis:cancelTask", async (input) => context.analysisService.cancelTask((input as { id: string }).id));
   handle("analysis:getRun", async (input) => {
     const run = context.analysisRepo.getRun((input as { id: string }).id);
     if (!run) {
@@ -214,9 +233,30 @@ export function registerHandlers(context: AppContext) {
         await context.secretManager.set(profile.id, profile.apiKey);
       }
     }
-    return context.settingsRepo.saveSettings(parsed);
+    return context.settingsRepo.saveSettings({
+      ...parsed,
+      llmProfiles: parsed.llmProfiles.map((profile) => ({
+        ...profile,
+        advancedHeaders: profile.advancedHeaders ?? null
+      }))
+    });
   });
-  handle("settings:testDataSource", async () => {
+  handle("settings:testDataSource", async (input) => {
+    const profileId = (input as { profileId?: string } | undefined)?.profileId;
+    const settings = context.settingsRepo.getSettings();
+    const providerProfile = profileId
+      ? settings?.providerProfiles.find((item) => item.id === profileId) ?? null
+      : settings?.providerProfiles.find((item) => item.id === settings.activeProviderProfileId)
+        ?? settings?.providerProfiles[0]
+        ?? null;
+
+    if (profileId && !providerProfile) {
+      return {
+        ok: false,
+        message: "Provider profile not found."
+      };
+    }
+
     try {
       const health = await context.dataServiceClient.getHealth();
       const ok = Boolean(health.ok);
@@ -228,9 +268,13 @@ export function registerHandlers(context: AppContext) {
           ? `Data source connected: ${providerName} (${market}).`
           : "Data source health check failed.",
         details: {
+          requestedProfileId: profileId ?? null,
+          boundBaseUrl: context.dataServiceManager.baseUrl,
           providerId: health.providerId ?? null,
           providerName: health.providerName ?? null,
           providerRepo: health.providerRepo ?? null,
+          configuredProviderType: providerProfile?.providerType ?? null,
+          configuredProviderBaseUrl: providerProfile?.baseUrl ?? null,
           market,
           quoteSource: health.quoteSource ?? null,
           klineSource: health.klineSource ?? null,
@@ -246,14 +290,34 @@ export function registerHandlers(context: AppContext) {
   });
   handle("settings:testLlmProfile", async (input) => {
     const settings = context.settingsRepo.getSettings();
-    const profileId = (input as { profileId: string }).profileId;
-    const profile = settings?.llmProfiles.find((item) => item.id === profileId);
+    const typed = input as {
+      profileId: string;
+      draft?: {
+        protocol: LlmProtocol;
+        displayProviderName: string;
+        baseUrl: string;
+        model: string;
+        timeoutMs: number;
+        maxRetries: number;
+        supportsJsonSchema: boolean;
+        advancedHeaders: Record<string, string> | null;
+      };
+      probeMode?: LlmProbeMode;
+    };
+    const profileId = typed.profileId;
+    const storedProfile = settings?.llmProfiles.find((item) => item.id === profileId);
+    const profile = storedProfile
+      ? {
+          ...storedProfile,
+          ...(typed.draft ?? {})
+        }
+      : null;
     if (!profile) {
       return { ok: false, message: "Profile not found." };
     }
 
     try {
-      await context.analysisService.testProfile(profile);
+      await context.analysisService.testProfile(profile, typed.probeMode ?? "models_then_minimal");
       return { ok: true, message: "LLM profile connected successfully." };
     } catch (error) {
       return { ok: false, message: error instanceof Error ? error.message : "Unknown error." };
