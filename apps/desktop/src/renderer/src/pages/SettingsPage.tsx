@@ -272,7 +272,7 @@ export function SettingsPage() {
           <p className={styles.meta}>平台目标: Windows 优先</p>
           <p className={styles.meta}>桌面框架: Electron + React + Fluent UI</p>
           <p className={styles.meta}>本地服务: FastAPI + AKShare + SQLite</p>
-          <p className={styles.meta}>建议: 在 Windows Node 22 + Python 3.13 环境完成打包和联调。</p>
+          <p className={styles.meta}>建议: 在 Windows Node 24 LTS + Python 3.13 环境完成打包和联调。</p>
         </article>
       </div>
 

@@ -53,13 +53,13 @@ StockDesk 是一个面向 Windows 桌面场景的 A 股监控与 AI 研究终端
 
 ### Windows 目标环境
 
-1. 使用仓库内置 Node 22。
+1. 安装 Node `24.14.0` 或任意 `24.x LTS`。
 2. 在 `apps/data-service` 下执行 `uv sync`。
 3. 在项目根目录执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node22.ps1' install"
-powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node.ps1' install --force"
+powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
 ### 非 Windows 环境
@@ -67,14 +67,18 @@ powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node22.ps1' --fil
 非 Windows 机器更适合做静态审查和类型检查，不建议作为最终打包环境。
 
 ```bash
+node -v  # 确认是 24.x
 npx pnpm@10.16.1 install
 npx pnpm@10.16.1 typecheck
 ```
 
 ## 本地工具链
 
-- 仓库内置了 Windows 版 `Node 22.22.0`，位于 `tools/node22`
-- Windows 下推荐通过 `scripts/pnpm-node22.ps1` 调用 `pnpm`
+- 当前目标运行时为 `Node 24 LTS`，推荐基线版本 `24.14.0`
+- 根目录 `.nvmrc` / `.node-version` 已固定到 `24.14.0`
+- Windows 下推荐通过 `scripts/pnpm-node.ps1` 调用 `pnpm`
+- 根目录 `.npmrc` 已开启 `engine-strict`，会拒绝 `Node 22` 或 `Node 25`
+- 如果你是从 `Node 22` 或 `Node 25` 切到 `Node 24`，请先执行一次 `pnpm install --force`，让 `better-sqlite3` 重新按当前 ABI 编译
 - Python 数据服务目标版本为 `3.13+`
 
 ## 运行说明
@@ -93,4 +97,4 @@ npx pnpm@10.16.1 --filter @stockdesk/shared test
 npx pnpm@10.16.1 --filter @stockdesk/analysis-core test
 ```
 
-如果要跑 `packages/db` 或完整桌面端联调，请优先在目标 Windows Node 22 环境下进行。
+如果要跑 `packages/db` 或完整桌面端联调，请优先在目标 Windows Node 24 环境下进行。

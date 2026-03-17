@@ -23,13 +23,13 @@ cd "D:\codex\First Edition"
 
 ## 1. 方案 A（推荐）：每次用 Bypass 启动，不改系统策略
 
-项目里已经有一个脚本：`scripts/pnpm-node22.ps1`，它会自动使用仓库内置的 Node 22。
+项目里已经有一个脚本：`scripts/pnpm-node.ps1`，它会优先使用 `tools/node24`，否则使用你系统里安装的 Node 24。
 
 在项目根目录执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' install"
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' install --force"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
 看到类似下面输出时表示成功：
@@ -66,22 +66,23 @@ pnpm run dev
 在项目根目录按顺序执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' install"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' install --force"
 cd "D:\codex\First Edition\apps\data-service"
 uv sync
 cd "D:\codex\First Edition"
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
 原因：
 
+- `install --force` 会在切换到 Node 24 后重编译 `better-sqlite3`
 - `uv sync` 确保本地 Python 数据服务依赖齐全
 - 桌面主进程开发态会调用 `apps/data-service/.venv/Scripts/python.exe`
 - 当前桌面端绑定的是内嵌本地数据服务，设置页中的数据源信息只用于展示当前实际生效的本地服务状态，不支持切到外部 provider URL
 
 ## 3.1 环境版本建议
 
-- Node: `22.22.0`（仓库内置 Windows 版）
+- Node: `24.14.0`（推荐 `24.x LTS`）
 - Python: `3.13+`
 - pnpm: `10.16.1`
 - Windows: 优先在 Windows 11 上联调和打包
@@ -95,7 +96,7 @@ powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\p
 不要直接输入 `pnpm ...`，改用：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
 ### 4.2 Electron 窗口没弹出
@@ -103,7 +104,7 @@ powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\p
 先确认命令输出里有没有构建错误；再执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' typecheck"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' typecheck"
 ```
 
 若 `typecheck` 报错，先修类型错误再启动。
@@ -127,10 +128,10 @@ Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 然后再启动：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
-> 现在脚本 `scripts/pnpm-node22.ps1` 已经会自动清理该变量。
+> 现在脚本 `scripts/pnpm-node.ps1` 已经会自动清理该变量，并拒绝非 `24.x` 的 Node。
 
 ### 4.4 启动后页面一直加载/数据空白
 
@@ -148,5 +149,5 @@ uv sync
 日常直接复制这条即可：
 
 ```powershell
-cd "D:\codex\First Edition"; powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+cd "D:\codex\First Edition"; powershell -ExecutionPolicy Bypass -Command "& 'D:\codex\First Edition\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```

@@ -5,7 +5,7 @@
 ### 目标环境
 
 - OS: Windows 11
-- Node: 22.22.0
+- Node: 24.14.0
 - pnpm: 10.16.1
 - Python: 3.13+
 
@@ -25,7 +25,7 @@ macOS / Linux 可以用于：
 ### Windows
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node22.ps1' install"
+powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node.ps1' install --force"
 cd .\apps\data-service
 uv sync
 cd ..\..
@@ -37,12 +37,23 @@ cd ..\..
 npx pnpm@10.16.1 install
 ```
 
+切换 Node 主版本后，建议立刻再执行一次：
+
+```bash
+npx pnpm@10.16.1 install --force
+```
+
+原因：
+
+- `better-sqlite3` 这类原生模块需要按当前 Node ABI 重新编译
+- 仅仅切换到 `Node 24` 而不重装依赖，数据库相关测试通常会直接失败
+
 ## 3. 启动桌面端
 
 ### Windows
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node22.ps1' --filter @stockdesk/desktop dev"
+powershell -ExecutionPolicy Bypass -Command "& '.\scripts\pnpm-node.ps1' --filter @stockdesk/desktop dev"
 ```
 
 ### 说明
@@ -121,6 +132,8 @@ npx pnpm@10.16.1 --filter @stockdesk/db test
 ## 7. 当前已知环境问题
 
 - `better-sqlite3` 在非目标 Node 版本上可能缺少预编译 binding
+- 当前仓库通过 `engines.node` 和 `.npmrc` 限定为 `Node 24.x`
+- 从其他 Node 主版本切换到 `24.x` 后，需要执行 `pnpm install --force`
 - Python 服务要求 `3.13+`
 - 当前仓库没有完整 CI，很多回归仍依赖本地执行
 
